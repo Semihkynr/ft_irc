@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Server.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: skaynar <skaynar@student.42.fr>            +#+  +:+       +#+        */
+/*   By: teraslan <teraslan@student.42istanbul.c    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/24 18:38:15 by skaynar           #+#    #+#             */
-/*   Updated: 2025/12/24 18:38:44 by skaynar          ###   ########.fr       */
+/*   Updated: 2025/12/24 20:05:14 by teraslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -93,6 +93,51 @@ void Server::handleClientData(int fd) {
 }
 
 void Server::processCommand(int fd, std::string message) {
-    std::cout << "FD " << fd << " sent: " << message << std::endl;
-    // Burası parsing motorunun kalbi olacak.
+    if (message.empty())
+        return;
+    
+    // Komutu ve parametreleri ayır
+    size_t spacePos = message.find(' ');
+    std::string command = message.substr(0, spacePos);
+    std::string params = "";
+    if (spacePos != std::string::npos)
+        params = message.substr(spacePos + 1);
+    
+    // PASS komutu - kimlik doğrulama
+    if (command == "PASS") {
+        if (params.empty()) {
+			//std::cout lar kontrol için eklendi
+            std::cout << "FD " << fd << " - REJECTED: No password provided" << std::endl;
+            std::string error = "ERROR :No password provided\r\n";
+            send(fd, error.c_str(), error.length(), 0);
+            return;
+        }
+        if (params == _password) {
+            _clients[fd]->setAuthenticated(true);
+            std::cout << "FD " << fd << " - AUTHENTICATED successfully" << std::endl;
+            std::string success = ":server 001 * :Password accepted\r\n";
+            send(fd, success.c_str(), success.length(), 0);
+        } else {
+            std::cout << "FD " << fd << " - REJECTED: Wrong password" << std::endl;
+            std::string error = "ERROR :Invalid password\r\n";
+            send(fd, error.c_str(), error.length(), 0);
+        }
+        return;
+    }
+    
+    // Diğer tüm komutlar için kimlik doğrulama kontrolü
+    if (!_clients[fd]->isAuthenticated()) {
+        std::cout << "FD " << fd << " - BLOCKED: Not authenticated (tried: " << message << ")" << std::endl;
+        std::string error = "ERROR :You must authenticate with PASS first\r\n";
+        send(fd, error.c_str(), error.length(), 0);
+        return;
+    }
+    
+    // Buraya geldi ise authenticated demektir
+    std::cout << "FD " << fd << " [AUTHENTICATED] sent: " << message << std::endl;
+    
+    // Burası diğer komutların işleneceği yer (NICK, USER, JOIN, PRIVMSG, vb.)
+    // Şimdilik sadece echo yapıyoruz
+    std::string response = "Command received: " + message + "\r\n";
+    send(fd, response.c_str(), response.length(), 0);
 }

@@ -3,16 +3,16 @@
 /*                                                        :::      ::::::::   */
 /*   Client.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: skaynar <skaynar@student.42.fr>            +#+  +:+       +#+        */
+/*   By: teraslan <teraslan@student.42istanbul.c    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/24 18:42:43 by skaynar           #+#    #+#             */
-/*   Updated: 2025/12/24 18:45:27 by skaynar          ###   ########.fr       */
+/*   Updated: 2025/12/24 19:59:41 by teraslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "Client.hpp"
 
-Client::Client(int fd) : _fd(fd), _nickname(""), _username(""), _buffer("") {
+Client::Client(int fd) : _fd(fd), _nickname(""), _username(""), _buffer(""), _authenticated(false) {
 }
 
 Client::~Client() {}
@@ -32,4 +32,12 @@ void Client::addBuffer(std::string str) {
 
 void Client::clearBuffer() {
     _buffer.clear();
+}
+
+bool Client::isAuthenticated() const {
+    return _authenticated;
+}
+
+void Client::setAuthenticated(bool auth) {
+    _authenticated = auth;
 }
