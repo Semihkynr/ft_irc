@@ -1,7 +1,14 @@
 #include "Channel.hpp"
+#include <sys/socket.h> // send için
 
 Channel::Channel(const std::string& name, const std::string& password, bool isPrivate, int maxUsers)
-    : name(name), password(password), isPrivate(isPrivate), maxUsers(maxUsers), topicSet(false) {
+    : name(name),
+      topic(),
+      password(password),
+      isPrivate(isPrivate),
+      topicSet(false),
+      maxUsers(maxUsers)
+{
 }
 
 Channel::~Channel() {
@@ -47,3 +54,11 @@ void Channel::setTopic(const std::string& newTopic) {
 }
 
 //broadcast eklenmesi lazım
+void Channel::broadcast(const std::string& message, int senderFd) {
+    for (std::map<int, Client*>::const_iterator it = users.begin(); it != users.end(); ++it) {
+        std::cout << "Send to fd: " << it->first << std::endl;
+        if (it->first != senderFd) {
+            send(it->first, message.c_str(), message.length(), 0);
+        }
+    }
+}

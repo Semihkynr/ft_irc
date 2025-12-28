@@ -40,6 +40,7 @@ class Channel {
         void setTopic(const std::string& newTopic);
 
         //broadcast eklenmesi lazım
+        void broadcast(const std::string& message, int senderFd);
 };
 
 
