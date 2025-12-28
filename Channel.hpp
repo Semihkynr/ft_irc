@@ -12,6 +12,7 @@ class Channel {
         std::string name;
         std::string topic;
         std::string password;
+
         bool       isPrivate;
         bool       topicSet;
         int        maxUsers;
@@ -23,6 +24,22 @@ class Channel {
     public:
         Channel(const std::string& name, const std::string& password, bool isPrivate, int maxUsers);
         ~Channel();
+
+        bool hasUser(int fd) const;
+        bool isOperator(int fd) const;
+        bool isInvited(int fd) const;
+
+        void addUser(int fd,Client* client);
+        void removeUser(int fd);
+
+        void addOperator(int fd);
+        void removeOperator(int fd);
+
+        void inviteUser(int fd);
+
+        void setTopic(const std::string& newTopic);
+
+        //broadcast eklenmesi lazım
 };
 
 
