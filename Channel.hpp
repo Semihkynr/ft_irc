@@ -41,6 +41,40 @@ class Channel {
 
         //broadcast eklenmesi lazım
         void broadcast(const std::string& message, int senderFd);
+
+        //channel kuralları
+        bool isFull() const;
+        bool canJoin(int fd,const std::string& pass) const;
+
+        //getterlar
+        std::string getName() const;
+        std::string getTopic() const;
+        bool        getIsPrivate() const;
+        bool        getTopicSet() const;
+        int         getMaxUsers() const;
+        size_t      getUserCount() const;
+
+       //operator işlemleri KICK-INVİTE-TOPİC-MODE
+        bool canKick(int fd) const;
+        bool canInvite(int fd) const;
+        bool canSetTopic(int fd) const;
+        bool canChangeMode(int fd) const;
+
+        bool kickUser(int operatorFd, int targetFd);
+        bool invite(int operatorFd, int targetFd);
+        bool changeTopic(int operatorFd, const std::string& newTopic);
+        bool changeMode(int operatorFd, bool makePrivate, const std::string& newPassword);
+
+        //channel modes
+        /*
+            +i : Set/remove Invite-only channel
+            +t : Set/remove the restrictions of the TOPIC command to channel operators
+            +k : Set/remove the channel key (password)
+            +o : Give/take channel operator privilege
+            +l : Set/remove the user limit to channel
+        */
+
+
 };
 
 
