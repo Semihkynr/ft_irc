@@ -53,6 +53,7 @@ class Channel {
         bool        getTopicSet() const;
         int         getMaxUsers() const;
         size_t      getUserCount() const;
+        const std::map<int, Client*>& getUsers() const;
 
        //operator işlemleri KICK-INVİTE-TOPİC-MODE
         bool canKick(int fd) const;
@@ -73,7 +74,6 @@ class Channel {
             +o : Give/take channel operator privilege
             +l : Set/remove the user limit to channel
         */
-
 
 };
 

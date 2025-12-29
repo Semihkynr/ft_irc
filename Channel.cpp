@@ -110,6 +110,11 @@ size_t Channel::getUserCount() const {
     return users.size();
 }
 
+const std::map<int, Client*>& Channel::getUsers() const {
+    return users;
+}
+
+
 //operator işlemleri KICK-INVİTE-TOPİC-MODE
 bool Channel::canKick(int fd) const {
     return isOperator(fd);

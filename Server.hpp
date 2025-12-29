@@ -6,7 +6,7 @@
 /*   By: ilknurhancer <ilknurhancer@student.42.f    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/24 18:38:07 by skaynar           #+#    #+#             */
-/*   Updated: 2025/12/27 18:50:19 by ilknurhance      ###   ########.fr       */
+/*   Updated: 2025/12/29 13:00:15 by ilknurhance      ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,6 +24,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include "Client.hpp"
+#include "Channel.hpp"
 
 class Server {
 private:
@@ -32,6 +33,7 @@ private:
     std::string                 _password;
     std::vector<struct pollfd>  _pollFds;
     std::map<int, Client*>      _clients; // FD'ye göre Client nesnesine hızlı erişim
+    std::map<std::string, Channel*> _channels; //elimizdeki channel listesine erişmek içim
 
     void    setupServerSocket();
     void    acceptNewClient();
@@ -44,7 +46,7 @@ private:
     void handleJoin(int fd, const std::string& params);
     void handlePrivmsg(int fd, const std::string& params);
 
-    void handlePing(int fd, const std::string& params);
+    //void handlePing(int fd, const std::string& params);
     void handleQuit(int fd, const std::string& params);
 
     // Helpers
@@ -53,6 +55,9 @@ private:
     static std::string toUpper(const std::string& s);
     void tryRegister(int fd);
     void sendWelcome(int fd);
+    std::string makePrefix(Client* c) const;
+    void        sendNumeric(int fd, const std::string& msg);
+
 
 
 
