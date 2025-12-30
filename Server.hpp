@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Server.hpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: ilknurhancer <ilknurhancer@student.42.f    +#+  +:+       +#+        */
+/*   By: skaynar <skaynar@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/24 18:38:07 by skaynar           #+#    #+#             */
-/*   Updated: 2025/12/29 13:00:15 by ilknurhance      ###   ########.fr       */
+/*   Updated: 2025/12/30 13:58:00 by skaynar          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -47,7 +47,7 @@ private:
     void handlePrivmsg(int fd, const std::string& params);
 
     //void handlePing(int fd, const std::string& params);
-    void handleQuit(int fd, const std::string& params);
+    // void handleQuit(int fd, const std::string& params);
 
     // Helpers
     bool isNickInUse(const std::string& nick, int requesterFd) const;

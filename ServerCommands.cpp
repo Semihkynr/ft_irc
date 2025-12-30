@@ -3,7 +3,13 @@
 void Server::handlePass(int fd, const std::string& rawParams)
 {
     std::string params = trimSpaces(rawParams);
-
+    if(_clients[fd]->isAuthenticated())
+    {
+        std::cout << "FD " << fd << " - REJECTED: Already authenticated" << std::endl;
+        std::string error = "ERROR :You are already authenticated\r\n";
+        send(fd, error.c_str(), error.length(), 0);
+        return;
+    }
     if (params.empty())
     {
         std::cout << "FD " << fd << " - REJECTED: No password provided" << std::endl;
@@ -310,3 +316,4 @@ void Server::handlePrivmsg(int fd, const std::string& rawParams)
 
     sendNumeric(toFd, msg);
 }
+

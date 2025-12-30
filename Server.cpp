@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Server.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: ilknurhancer <ilknurhancer@student.42.f    +#+  +:+       +#+        */
+/*   By: skaynar <skaynar@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/24 18:38:15 by skaynar           #+#    #+#             */
-/*   Updated: 2025/12/29 12:59:38 by ilknurhance      ###   ########.fr       */
+/*   Updated: 2025/12/30 16:29:52 by skaynar          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,14 +16,22 @@ Server::Server(int port, std::string password) : _port(port), _password(password
 
 Server::~Server()
 {
-    for (std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); ++it)
-        delete it->second;
-
     for (std::map<std::string, Channel*>::iterator it = _channels.begin(); it != _channels.end(); ++it)
+    {
         delete it->second;
+    }
+    _channels.clear();
 
-    if (_serverFd > 0)
-        close(_serverFd);
+    //İstemcileri temizle ve bağlantıları kes
+    for (std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); ++it)
+    {
+        int fd = it->first;
+        close(fd);
+        delete it->second;
+    }
+    _clients.clear();
+    if (_serverFd > 0) {close(_serverFd);}  
+    std::cout << "[SHUTDOWN]: Tüm bağlantılar kesildi ve bellek temizlendi." << std::endl;
 }
 
 void Server::init() {
@@ -96,13 +104,6 @@ void Server::handleClientData(int fd) {
     }
 }
 
-
-
-
-
-
-
-
 //PROCESS COMMAND
 void Server::processCommand(int fd, std::string message)
 {
@@ -149,7 +150,6 @@ void Server::processCommand(int fd, std::string message)
             return;
         }
     }
-    
     // Komutu ilgili handler'a gönder
     std::cout << "FD " << fd << " [AUTHENTICATED] sent: " << message << std::endl;
 
@@ -157,8 +157,8 @@ void Server::processCommand(int fd, std::string message)
     else if (command == "USER")    handleUser(fd, params);
     else if (command == "JOIN")    handleJoin(fd, params);
     else if (command == "PRIVMSG") handlePrivmsg(fd, params);
-    else if (command == "PING")    handlePing(fd, params);
-    else if (command == "QUIT")    handleQuit(fd, params);
+    // else if (command == "PING")    handlePing(fd, params);
+    // else if (command == "QUIT")    handleQuit(fd, params);
     else
     {
         std::string error = "ERROR :Unknown command\r\n";
