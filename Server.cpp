@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Server.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: teraslan <teraslan@student.42istanbul.c    +#+  +:+       +#+        */
+/*   By: skaynar <skaynar@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/24 18:38:15 by skaynar           #+#    #+#             */
-/*   Updated: 2025/12/24 20:05:14 by teraslan         ###   ########.fr       */
+/*   Updated: 2025/12/30 16:29:52 by skaynar          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,12 +14,24 @@
 
 Server::Server(int port, std::string password) : _port(port), _password(password) {}
 
-Server::~Server() {
-    for (std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); ++it) {
+Server::~Server()
+{
+    for (std::map<std::string, Channel*>::iterator it = _channels.begin(); it != _channels.end(); ++it)
+    {
         delete it->second;
-        close(it->first);
     }
-    close(_serverFd);
+    _channels.clear();
+
+    //İstemcileri temizle ve bağlantıları kes
+    for (std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); ++it)
+    {
+        int fd = it->first;
+        close(fd);
+        delete it->second;
+    }
+    _clients.clear();
+    if (_serverFd > 0) {close(_serverFd);}  
+    std::cout << "[SHUTDOWN]: Tüm bağlantılar kesildi ve bellek temizlendi." << std::endl;
 }
 
 void Server::init() {
@@ -92,52 +104,64 @@ void Server::handleClientData(int fd) {
     }
 }
 
-void Server::processCommand(int fd, std::string message) {
+//PROCESS COMMAND
+void Server::processCommand(int fd, std::string message)
+{
     if (message.empty())
         return;
-    
-    // Komutu ve parametreleri ayır
+
+    if (!message.empty() && message[message.size() - 1] == '\r')
+        message.erase(message.size() - 1);
+
+    message = trimSpaces(message);
+    if (message.empty())
+        return;
+
     size_t spacePos = message.find(' ');
-    std::string command = message.substr(0, spacePos);
-    std::string params = "";
-    if (spacePos != std::string::npos)
-        params = message.substr(spacePos + 1);
-    
-    // PASS komutu - kimlik doğrulama
-    if (command == "PASS") {
-        if (params.empty()) {
-			//std::cout lar kontrol için eklendi
-            std::cout << "FD " << fd << " - REJECTED: No password provided" << std::endl;
-            std::string error = "ERROR :No password provided\r\n";
-            send(fd, error.c_str(), error.length(), 0);
-            return;
-        }
-        if (params == _password) {
-            _clients[fd]->setAuthenticated(true);
-            std::cout << "FD " << fd << " - AUTHENTICATED successfully" << std::endl;
-            std::string success = ":server 001 * :Password accepted\r\n";
-            send(fd, success.c_str(), success.length(), 0);
-        } else {
-            std::cout << "FD " << fd << " - REJECTED: Wrong password" << std::endl;
-            std::string error = "ERROR :Invalid password\r\n";
-            send(fd, error.c_str(), error.length(), 0);
-        }
+    std::string command = (spacePos == std::string::npos) ? message : message.substr(0, spacePos);
+    std::string params  = (spacePos == std::string::npos) ? ""      : message.substr(spacePos + 1);
+
+    command = toUpper(command);
+    params  = trimSpaces(params);
+
+    if (command == "PASS")
+    {
+        handlePass(fd, params);
         return;
     }
     
-    // Diğer tüm komutlar için kimlik doğrulama kontrolü
-    if (!_clients[fd]->isAuthenticated()) {
+    //PASS olmadan diğerleri yok
+    if (!_clients[fd]->isAuthenticated())
+    {
         std::cout << "FD " << fd << " - BLOCKED: Not authenticated (tried: " << message << ")" << std::endl;
         std::string error = "ERROR :You must authenticate with PASS first\r\n";
         send(fd, error.c_str(), error.length(), 0);
         return;
     }
     
-    // Buraya geldi ise authenticated demektir
+    //Nick ve Username ayarlanmadan diğer komutların çalışması da engelleniyor.
+    if (command != "NICK" && command != "USER" && command != "QUIT" && command != "PING")
+    {
+        if (!_clients[fd]->hasNickname() || !_clients[fd]->hasUsername())
+        {
+            std::cout << "FD " << fd << " - BLOCKED: Not registered (tried: " << message << ")" << std::endl;
+            std::string err = ":server 451 * :You have not registered\r\n";
+            send(fd, err.c_str(), err.length(), 0);
+            return;
+        }
+    }
+    // Komutu ilgili handler'a gönder
     std::cout << "FD " << fd << " [AUTHENTICATED] sent: " << message << std::endl;
-    
-    // Burası diğer komutların işleneceği yer (NICK, USER, JOIN, PRIVMSG, vb.)
-    // Şimdilik sadece echo yapıyoruz
-    std::string response = "Command received: " + message + "\r\n";
-    send(fd, response.c_str(), response.length(), 0);
+
+    if      (command == "NICK")    handleNick(fd, params);
+    else if (command == "USER")    handleUser(fd, params);
+    else if (command == "JOIN")    handleJoin(fd, params);
+    else if (command == "PRIVMSG") handlePrivmsg(fd, params);
+    // else if (command == "PING")    handlePing(fd, params);
+    // else if (command == "QUIT")    handleQuit(fd, params);
+    else
+    {
+        std::string error = "ERROR :Unknown command\r\n";
+        send(fd, error.c_str(), error.length(), 0);
+    }
 }
