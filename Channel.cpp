@@ -39,10 +39,11 @@ void Channel::removeUser(int fd) {
     invitedUsers.erase(fd);
 }
 
+//+o mode için
 void Channel::addOperator(int fd) {
     operators.insert(fd);
 }
-
+//-o mode için
 void Channel::removeOperator(int fd) {
     operators.erase(fd);
 }
@@ -53,10 +54,19 @@ void Channel::inviteUser(int fd) {
 
 void Channel::setTopic(const std::string& newTopic) {
     topic = newTopic;
-    topicSet = true;
+    topicSet = true; //JOIN  de mesaj basılırken lazım
+}
+
+//change or view topic diyo subject de sonra burayı kontrol et
+bool Channel::changeTopic(int operatorFd, const std::string& newTopic) {
+    if (!canSetTopic(operatorFd))
+        return false;
+    setTopic(newTopic);
+    return true;
 }
 
 //broadcast eklenmesi lazım
+//kanaldaki herkese mesaj
 void Channel::broadcast(const std::string& message, int senderFd) {
     for (std::map<int, Client*>::const_iterator it = users.begin(); it != users.end(); ++it) {
         std::cout << "Send to fd: " << it->first << std::endl;
@@ -68,6 +78,7 @@ void Channel::broadcast(const std::string& message, int senderFd) {
 
 //channel kuralları
 
+//join kontrolü
 bool Channel::isFull() const {
     return users.size() >= static_cast<size_t>(maxUsers);
 }
@@ -125,7 +136,9 @@ bool Channel::canInvite(int fd) const {
 }
 
 bool Channel::canSetTopic(int fd) const {
-    return isOperator(fd);
+    if (!topicOperatorOnlyMode)
+        return true;          // +t yoksa herkes
+    return isOperator(fd);    // +t varsa sadece OP
 }
 
 bool Channel::canChangeMode(int fd) const {
@@ -151,22 +164,83 @@ bool Channel::invite(int operatorFd, int targetFd) {
     return true;
 }
 
-//change or view topic diyo subject de sonra burayı kontrol et
-bool Channel::changeTopic(int operatorFd, const std::string& newTopic) {
-    if (!canSetTopic(operatorFd))
-        return false;
-    setTopic(newTopic);
-    return true;
-}
+//MODE
 
-//burda sadece +i ve +k değişiyo sonra kontrol et
-//sonrasında mode ları ayırmak lazım
-bool Channel::changeMode(int operatorFd, bool makePrivate, const std::string& newPassword) {
+// MODE #channel +i,+t,+k,+l <password> <limit>
+
+bool Channel::applyModeString(int operatorFd, const std::string& modes,
+                     const std::vector<std::string>& params) {
     if (!canChangeMode(operatorFd))
         return false;
 
-    isPrivate = makePrivate;
-    password = newPassword;
+    bool enable = true;
+    size_t paramIndex = 0;
+
+    for (size_t i = 0; i < modes.length(); ++i) {
+        char mode = modes[i];
+        if (mode == '+') {
+            enable = true;
+        } else if (mode == '-') {
+            enable = false;
+        } else {
+            std::string param;
+            if ((mode == 'k' || mode == 'l') && paramIndex < params.size()) {
+                param = params[paramIndex++];
+            }
+            if (!setMode(operatorFd, mode, enable, param)) {
+                return false; // Failed to set mode
+            }
+        }
+    }
     return true;
 }
 
+bool Channel::setMode(int operatorFd, char mode, bool enable, const std::string& param) {
+    if (!canChangeMode(operatorFd))
+        return false;
+    switch (mode) {
+        case 'i':
+            setInviteOnlyMode(enable);
+            break;
+        case 't':
+            setTopicOperatorOnlyMode(enable);
+            break;
+        case 'k':
+            if (enable) {
+                password = param;
+            } else {
+                password.clear();
+            }
+            setKeyMode(enable);
+            break;
+        case 'l':
+            if (enable) {
+                maxUsers = std::stoi(param);
+            } else {
+                maxUsers = 0; // 0 means no limit
+            }
+            setLimitMode(enable);
+            break;
+        default:
+            return false; // Unknown mode
+    }
+    return true;
+}
+
+//channel modes
+
+void Channel::setInviteOnlyMode(bool mode) {
+    inviteOnlyMode = mode;
+}
+
+void Channel::setTopicOperatorOnlyMode(bool mode) {
+    topicOperatorOnlyMode = mode;
+}
+
+void Channel::setKeyMode(bool mode) {
+    keyMode = mode;
+}
+
+void Channel::setLimitMode(bool mode) {
+    limitMode = mode;
+}
