@@ -6,12 +6,13 @@
 /*   By: teraslan <teraslan@student.42istanbul.c    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/03 14:12:19 by teraslan          #+#    #+#             */
-/*   Updated: 2026/01/03 16:59:33 by teraslan         ###   ########.fr       */
+/*   Updated: 2026/01/03 17:04:33 by teraslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "Channel.hpp"
 #include <sys/socket.h> // send için
+#include <cstdlib>
 
 Channel::Channel(const std::string& name, const std::string& password, bool isPrivate, int maxUsers)
     : name(name),
@@ -256,7 +257,7 @@ bool Channel::setMode(int operatorFd, char mode, bool enable, const std::string&
             break;
         case 'l':
             if (enable) {
-                maxUsers = atoi(param.c_str());
+                maxUsers = std::atoi(param.c_str());
             } else {
                 maxUsers = 0; // 0 means no limit
             }
