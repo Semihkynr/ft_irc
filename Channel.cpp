@@ -7,7 +7,11 @@ Channel::Channel(const std::string& name, const std::string& password, bool isPr
       password(password),
       isPrivate(isPrivate),
       topicSet(false),
-      maxUsers(maxUsers)
+      maxUsers(maxUsers),
+      inviteOnlyMode(isPrivate),
+      topicOperatorOnlyMode(false),
+      keyMode(!password.empty()),
+      limitMode(maxUsers > 0)
 {
 }
 
@@ -52,6 +56,10 @@ void Channel::inviteUser(int fd) {
     invitedUsers.insert(fd);
 }
 
+void Channel::removeInvite(int fd) {
+    invitedUsers.erase(fd);
+}
+
 void Channel::setTopic(const std::string& newTopic) {
     topic = newTopic;
     topicSet = true; //JOIN  de mesaj basılırken lazım
@@ -80,7 +88,13 @@ void Channel::broadcast(const std::string& message, int senderFd) {
 
 //join kontrolü
 bool Channel::isFull() const {
+    if (maxUsers <= 0)
+        return false; // limit yok
     return users.size() >= static_cast<size_t>(maxUsers);
+}
+
+bool Channel::isEmpty() const {
+    return users.empty();
 }
 
 bool Channel::canJoin(int fd, const std::string& pass) const {
@@ -123,6 +137,21 @@ size_t Channel::getUserCount() const {
 
 const std::map<int, Client*>& Channel::getUsers() const {
     return users;
+}
+
+std::string Channel::getModeString() const {
+    std::string modes = "+";
+    if (inviteOnlyMode)
+        modes += "i";
+    if (topicOperatorOnlyMode)
+        modes += "t";
+    if (keyMode)
+        modes += "k";
+    if (limitMode)
+        modes += "l";
+    if (modes == "+")
+        return "";
+    return modes;
 }
 
 
@@ -215,7 +244,7 @@ bool Channel::setMode(int operatorFd, char mode, bool enable, const std::string&
             break;
         case 'l':
             if (enable) {
-                maxUsers = std::stoi(param);
+                maxUsers = atoi(param.c_str());
             } else {
                 maxUsers = 0; // 0 means no limit
             }
@@ -243,4 +272,20 @@ void Channel::setKeyMode(bool mode) {
 
 void Channel::setLimitMode(bool mode) {
     limitMode = mode;
+}
+
+bool Channel::getInviteOnlyMode() const {
+    return inviteOnlyMode;
+}
+
+bool Channel::getTopicOperatorOnlyMode() const {
+    return topicOperatorOnlyMode;
+}
+
+bool Channel::getKeyMode() const {
+    return keyMode;
+}
+
+bool Channel::getLimitMode() const {
+    return limitMode;
 }

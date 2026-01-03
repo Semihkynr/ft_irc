@@ -5,6 +5,7 @@
 #include <map>
 #include <set>
 #include "Client.hpp"
+#include <vector>
 
 class Channel {
 
@@ -41,6 +42,7 @@ class Channel {
         void removeOperator(int fd);
 
         void inviteUser(int fd);
+        void removeInvite(int fd);
 
         void setTopic(const std::string& newTopic);
         bool changeTopic(int operatorFd, const std::string& newTopic);
@@ -50,6 +52,7 @@ class Channel {
 
         //join kontrolü
         bool isFull() const;
+        bool isEmpty() const;
         bool canJoin(int fd,const std::string& pass) const;
 
         //getterlar
@@ -60,6 +63,7 @@ class Channel {
         int         getMaxUsers() const;
         size_t      getUserCount() const;
         const std::map<int, Client*>& getUsers() const;
+        std::string getModeString() const;
 
        //operator işlemleri KICK-INVİTE-TOPİC-MODE
         bool canKick(int fd) const;
@@ -97,6 +101,11 @@ class Channel {
         void setTopicOperatorOnlyMode(bool mode);
         void setKeyMode(bool mode);
         void setLimitMode(bool mode);
+
+        bool getInviteOnlyMode() const;
+        bool getTopicOperatorOnlyMode() const;
+        bool getKeyMode() const;
+        bool getLimitMode() const;
 
 
 };
