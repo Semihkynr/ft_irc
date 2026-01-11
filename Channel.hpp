@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Channel.hpp                                        :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: teraslan <teraslan@student.42istanbul.c    +#+  +:+       +#+        */
+/*   By: ilknurhancer <ilknurhancer@student.42.f    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/03 14:12:31 by teraslan          #+#    #+#             */
-/*   Updated: 2026/01/03 14:12:32 by teraslan         ###   ########.fr       */
+/*   Updated: 2026/01/11 20:32:51 by ilknurhance      ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,6 +16,9 @@
 #include <string>
 #include <map>
 #include <set>
+#include <iostream>
+#include <sys/socket.h> // send için
+#include <cstdlib>
 #include "Client.hpp"
 #include <vector>
 

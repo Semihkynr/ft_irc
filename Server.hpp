@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Server.hpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: skaynar <skaynar@student.42.fr>            +#+  +:+       +#+        */
+/*   By: ilknurhancer <ilknurhancer@student.42.f    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/24 18:38:07 by skaynar           #+#    #+#             */
-/*   Updated: 2025/12/30 13:58:00 by skaynar          ###   ########.fr       */
+/*   Updated: 2026/01/11 20:24:41 by ilknurhance      ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,6 +23,10 @@
 #include <poll.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <cstdlib>
+#include <cerrno>
+#include <climits>
+#include <sstream>
 #include "Client.hpp"
 #include "Channel.hpp"
 
@@ -45,9 +49,13 @@ private:
     void handleUser(int fd, const std::string& params);
     void handleJoin(int fd, const std::string& params);
     void handlePrivmsg(int fd, const std::string& params);
-
     //void handlePing(int fd, const std::string& params);
-    // void handleQuit(int fd, const std::string& params);
+    void handleQuit(int fd, const std::string& params);
+
+    void handleMode(int fd, const std::string& params);
+    void handleKick(int fd, const std::string& params);
+    void handleInvite(int fd, const std::string& params);
+    void handleTopic(int fd, const std::string& params);
 
     // Helpers
     bool isNickInUse(const std::string& nick, int requesterFd) const;
@@ -57,6 +65,11 @@ private:
     void sendWelcome(int fd);
     std::string makePrefix(Client* c) const;
     void        sendNumeric(int fd, const std::string& msg);
+    int findFdByNick(const std::string& nick) const;
+    std::string intToString(int v);
+    
+    void removeClientFromAllChannels(int fd, const std::string& quitMsg);
+
 
 
 

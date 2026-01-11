@@ -297,7 +297,6 @@ void Server::handlePrivmsg(int fd, const std::string& rawParams)
         return;
     }
 
-    // User’a mesaj: nick’ten fd bul
     int toFd = -1;
     for (std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); ++it)
     {
@@ -317,3 +316,311 @@ void Server::handlePrivmsg(int fd, const std::string& rawParams)
     sendNumeric(toFd, msg);
 }
 
+void Server::handleQuit(int fd, const std::string& rawParams)
+{
+    Client* c = _clients[fd];
+
+    std::string reason = trimSpaces(rawParams);
+    if (!reason.empty() && reason[0] == ':')
+        reason = reason.substr(1);
+    if (reason.empty())
+        reason = "Client Quit";
+
+    std::string quitMsg;
+    if (c)
+        quitMsg = makePrefix(c) + " QUIT :" + reason + "\r\n";
+
+    removeClientFromAllChannels(fd, quitMsg);
+
+    close(fd);
+
+    if (_clients.find(fd) != _clients.end())
+    {
+        delete _clients[fd];
+        _clients.erase(fd);
+    }
+
+    for (std::vector<struct pollfd>::iterator it = _pollFds.begin(); it != _pollFds.end(); ++it)
+    {
+        if (it->fd == fd) { _pollFds.erase(it); break; }
+    }
+}
+
+
+//CHANNEL COMMAND
+
+void Server::handleTopic(int fd, const std::string& rawParams)
+{
+    Client* c = _clients[fd];
+    if (!c) return;
+
+    std::string params = trimSpaces(rawParams);
+    if (params.empty())
+    {
+        sendNumeric(fd, ":server 461 " + c->getNickname() + " TOPIC :Not enough parameters\r\n");
+        return;
+    }
+
+    // TOPIC #chan [:new topic]
+    size_t sp = params.find(' ');
+    std::string chan = (sp == std::string::npos) ? params : trimSpaces(params.substr(0, sp));
+    std::string rest = (sp == std::string::npos) ? ""     : trimSpaces(params.substr(sp + 1));
+
+    std::map<std::string, Channel*>::iterator it = _channels.find(chan);
+    if (it == _channels.end())
+    {
+        sendNumeric(fd, ":server 403 " + c->getNickname() + " " + chan + " :No such channel\r\n");
+        return;
+    }
+
+    Channel* ch = it->second;
+    if (!ch->hasUser(fd))
+    {
+        sendNumeric(fd, ":server 442 " + c->getNickname() + " " + chan + " :You're not on that channel\r\n");
+        return;
+    }
+
+    // Sadece görüntüleme
+    if (rest.empty())
+    {
+        if (ch->getTopicSet())
+            sendNumeric(fd, ":server 332 " + c->getNickname() + " " + chan + " :" + ch->getTopic() + "\r\n");
+        else
+            sendNumeric(fd, ":server 331 " + c->getNickname() + " " + chan + " :No topic is set\r\n");
+        return;
+    }
+
+    // Set etme (rest genelde ":topic")
+    if (!rest.empty() && rest[0] == ':') rest = rest.substr(1);
+
+    if (!ch->changeTopic(fd, rest))
+    {
+        sendNumeric(fd, ":server 482 " + c->getNickname() + " " + chan + " :You're not channel operator\r\n");
+        return;
+    }
+
+    std::string msg = makePrefix(c) + " TOPIC " + chan + " :" + rest + "\r\n";
+    sendNumeric(fd, msg);
+    ch->broadcast(msg, fd);
+}
+
+
+void Server::handleInvite(int fd, const std::string& rawParams)
+{
+    Client* c = _clients[fd];
+    if (!c) return;
+
+    std::string params = trimSpaces(rawParams);
+    size_t sp = params.find(' ');
+    if (sp == std::string::npos)
+    {
+        sendNumeric(fd, ":server 461 " + c->getNickname() + " INVITE :Not enough parameters\r\n");
+        return;
+    }
+
+    std::string nick = trimSpaces(params.substr(0, sp));
+    std::string chan = trimSpaces(params.substr(sp + 1));
+
+    int targetFd = findFdByNick(nick);
+    if (targetFd == -1)
+    {
+        sendNumeric(fd, ":server 401 " + c->getNickname() + " " + nick + " :No such nick\r\n");
+        return;
+    }
+
+    std::map<std::string, Channel*>::iterator it = _channels.find(chan);
+    if (it == _channels.end())
+    {
+        sendNumeric(fd, ":server 403 " + c->getNickname() + " " + chan + " :No such channel\r\n");
+        return;
+    }
+
+    Channel* ch = it->second;
+    if (!ch->hasUser(fd))
+    {
+        sendNumeric(fd, ":server 442 " + c->getNickname() + " " + chan + " :You're not on that channel\r\n");
+        return;
+    }
+
+    if (!ch->invite(fd, targetFd))
+    {
+        sendNumeric(fd, ":server 482 " + c->getNickname() + " " + chan + " :You're not channel operator\r\n");
+        return;
+    }
+
+    std::string msgToTarget = makePrefix(c) + " INVITE " + nick + " :" + chan + "\r\n";
+    sendNumeric(targetFd, msgToTarget);
+
+    sendNumeric(fd, ":server 341 " + c->getNickname() + " " + nick + " " + chan + "\r\n");
+}
+
+
+void Server::handleKick(int fd, const std::string& rawParams)
+{
+    Client* c = _clients[fd];
+    if (!c) return;
+
+    std::string params = trimSpaces(rawParams);
+    // KICK #chan nick [:reason]
+    size_t sp1 = params.find(' ');
+    if (sp1 == std::string::npos)
+    {
+        sendNumeric(fd, ":server 461 " + c->getNickname() + " KICK :Not enough parameters\r\n");
+        return;
+    }
+
+    std::string chan = trimSpaces(params.substr(0, sp1));
+    std::string rest = trimSpaces(params.substr(sp1 + 1));
+
+    size_t sp2 = rest.find(' ');
+    std::string nick = (sp2 == std::string::npos) ? rest : trimSpaces(rest.substr(0, sp2));
+    std::string reason = (sp2 == std::string::npos) ? "" : trimSpaces(rest.substr(sp2 + 1));
+    if (!reason.empty() && reason[0] == ':') reason = reason.substr(1);
+    if (reason.empty()) reason = "Kicked";
+
+    int targetFd = findFdByNick(nick);
+    if (targetFd == -1)
+    {
+        sendNumeric(fd, ":server 401 " + c->getNickname() + " " + nick + " :No such nick\r\n");
+        return;
+    }
+
+    std::map<std::string, Channel*>::iterator it = _channels.find(chan);
+    if (it == _channels.end())
+    {
+        sendNumeric(fd, ":server 403 " + c->getNickname() + " " + chan + " :No such channel\r\n");
+        return;
+    }
+
+    Channel* ch = it->second;
+    if (!ch->hasUser(fd))
+    {
+        sendNumeric(fd, ":server 442 " + c->getNickname() + " " + chan + " :You're not on that channel\r\n");
+        return;
+    }
+
+    if (!ch->kickUser(fd, targetFd))
+    {
+        sendNumeric(fd, ":server 482 " + c->getNickname() + " " + chan + " :You're not channel operator\r\n");
+        return;
+    }
+
+    std::string msg = makePrefix(c) + " KICK " + chan + " " + nick + " :" + reason + "\r\n";
+    sendNumeric(fd, msg);
+    ch->broadcast(msg, fd);
+    sendNumeric(targetFd, msg);
+
+    // kanal boşsa sil (policy)
+    if (ch->isEmpty())
+    {
+        delete ch;
+        _channels.erase(it);
+    }
+}
+
+void Server::handleMode(int fd, const std::string& rawParams)
+{
+    Client* c = _clients[fd];
+    if (!c) return;
+
+    std::string params = trimSpaces(rawParams);
+    if (params.empty())
+    {
+        sendNumeric(fd, ":server 461 " + c->getNickname() + " MODE :Not enough parameters\r\n");
+        return;
+    }
+
+    // MODE #chan [modes] [modeparams...]
+    size_t sp = params.find(' ');
+    std::string chan = (sp == std::string::npos) ? params : trimSpaces(params.substr(0, sp));
+    std::string rest = (sp == std::string::npos) ? ""     : trimSpaces(params.substr(sp + 1));
+
+    std::map<std::string, Channel*>::iterator it = _channels.find(chan);
+    if (it == _channels.end())
+    {
+        sendNumeric(fd, ":server 403 " + c->getNickname() + " " + chan + " :No such channel\r\n");
+        return;
+    }
+
+    Channel* ch = it->second;
+    if (!ch->hasUser(fd))
+    {
+        sendNumeric(fd, ":server 442 " + c->getNickname() + " " + chan + " :You're not on that channel\r\n");
+        return;
+    }
+
+    // sadece MODE #chan -> mevcut mode string dön
+    if (rest.empty())
+    {
+        std::string modes = ch->getModeString();
+        sendNumeric(fd, ":server 324 " + c->getNickname() + " " + chan + " " + modes + "\r\n");
+        return;
+    }
+
+    // rest: "<modes> <params...>"
+    size_t sp2 = rest.find(' ');
+    std::string modeStr = (sp2 == std::string::npos) ? rest : trimSpaces(rest.substr(0, sp2));
+    std::string paramStr = (sp2 == std::string::npos) ? "" : trimSpaces(rest.substr(sp2 + 1));
+
+    // paramStr’yi tokenlara böl
+    std::vector<std::string> rawModeParams;
+    while (!paramStr.empty())
+    {
+        size_t psp = paramStr.find(' ');
+        if (psp == std::string::npos) { rawModeParams.push_back(paramStr); break; }
+        rawModeParams.push_back(paramStr.substr(0, psp));
+        paramStr = trimSpaces(paramStr.substr(psp + 1));
+    }
+
+    // Channel.applyModeString paramları:
+    // k,l,o için birer parametre gerekir.
+    // o parametresi IRC’de nick; burada nick->fd çevireceğiz.
+    std::vector<std::string> paramsForChannel;
+    bool sign = true;
+    size_t rawIdx = 0;
+
+    for (size_t i = 0; i < modeStr.size(); ++i)
+    {
+        char m = modeStr[i];
+        if (m == '+' || m == '-') continue;
+
+        if (m == 'k' || m == 'l' || m == 'o')
+        {
+            if (rawIdx >= rawModeParams.size())
+            {
+                sendNumeric(fd, ":server 461 " + c->getNickname() + " MODE :Not enough parameters\r\n");
+                return;
+            }
+
+            std::string p = rawModeParams[rawIdx++];
+
+            if (m == 'o')
+            {
+                int targetFd = findFdByNick(p);
+                if (targetFd == -1)
+                {
+                    sendNumeric(fd, ":server 401 " + c->getNickname() + " " + p + " :No such nick\r\n");
+                    return;
+                }
+                p = intToString(targetFd); // Channel'a fd olarak ver
+            }
+
+            paramsForChannel.push_back(p);
+        }
+    }
+
+    if (!ch->applyModeString(fd, modeStr, paramsForChannel))
+    {
+        sendNumeric(fd, ":server 482 " + c->getNickname() + " " + chan + " :You're not channel operator\r\n");
+        return;
+    }
+
+    // MODE değişikliğini kanala duyur
+    std::string msg = makePrefix(c) + " MODE " + chan + " " + modeStr;
+    for (size_t i = 0; i < rawModeParams.size(); ++i)
+        msg += " " + rawModeParams[i];
+    msg += "\r\n";
+
+    sendNumeric(fd, msg);
+    ch->broadcast(msg, fd);
+}

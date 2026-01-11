@@ -6,15 +6,19 @@
 /*   By: ilknurhancer <ilknurhancer@student.42.f    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/24 18:42:43 by skaynar           #+#    #+#             */
-/*   Updated: 2025/12/27 18:49:40 by ilknurhance      ###   ########.fr       */
+/*   Updated: 2026/01/11 19:34:46 by ilknurhance      ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "Client.hpp"
 
 Client::Client(int fd)
-    : _fd(fd), _nickname(""), _username(""), _buffer(""),
-      _authenticated(false), _registered(false)
+    : _fd(fd),
+      _nickname(""),
+      _username(""),
+      _buffer(""),
+      _authenticated(false),
+      _registered(false)
 {}
 
 Client::~Client() {}
@@ -23,19 +27,20 @@ int Client::getFd() const {
     return _fd;
 }
 
-std::string Client::getBuffer() const {
-    return _buffer;
+// Input buffer
+void Client::addBuffer(const std::string& str) {
+    _buffer += str;
 }
 
-
-void Client::addBuffer(std::string str) {
-    _buffer += str;
+std::string Client::getBuffer() const {
+    return _buffer;
 }
 
 void Client::clearBuffer() {
     _buffer.clear();
 }
 
+// Auth / register flags
 bool Client::isAuthenticated() const {
     return _authenticated;
 }
@@ -44,14 +49,36 @@ void Client::setAuthenticated(bool auth) {
     _authenticated = auth;
 }
 
-//added by ilknur
-void Client::setNickname(const std::string& nick) { _nickname = nick; }
-const std::string& Client::getNickname() const { return _nickname; }
-bool Client::hasNickname() const { return !_nickname.empty(); }
+bool Client::isRegistered() const {
+    return _registered;
+}
 
-void Client::setUsername(const std::string& user) { _username = user; }
-const std::string& Client::getUsername() const { return _username; }
-bool Client::hasUsername() const { return !_username.empty(); }
+void Client::setRegistered(bool reg) {
+    _registered = reg;
+}
 
-bool Client::isRegistered() const { return _registered; }
-void Client::setRegistered(bool reg) { _registered = reg; }
+// Nickname
+void Client::setNickname(const std::string& nick) {
+    _nickname = nick;
+}
+
+const std::string& Client::getNickname() const {
+    return _nickname;
+}
+
+bool Client::hasNickname() const {
+    return !_nickname.empty();
+}
+
+// Username
+void Client::setUsername(const std::string& user) {
+    _username = user;
+}
+
+const std::string& Client::getUsername() const {
+    return _username;
+}
+
+bool Client::hasUsername() const {
+    return !_username.empty();
+}

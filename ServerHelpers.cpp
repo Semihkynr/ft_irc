@@ -96,3 +96,48 @@ void Server::sendNumeric(int fd, const std::string& msg)
 {
     send(fd, msg.c_str(), msg.length(), 0);
 }
+
+int Server::findFdByNick(const std::string& nick) const
+{
+    for (std::map<int, Client*>::const_iterator it = _clients.begin(); it != _clients.end(); ++it)
+    {
+        if (it->second && it->second->hasNickname() && it->second->getNickname() == nick)
+            return it->first;
+    }
+    return -1;
+}
+
+std::string intToString(int v)
+{
+    std::ostringstream oss;
+    oss << v;
+    return oss.str();
+}
+
+void Server::removeClientFromAllChannels(int fd, const std::string& quitMsg)
+{
+    for (std::map<std::string, Channel*>::iterator it = _channels.begin(); it != _channels.end(); )
+    {
+        Channel* ch = it->second;
+
+        if (ch && ch->hasUser(fd))
+        {
+            // Kanaldakilere QUIT mesajını duyur (sender hariç)
+            if (!quitMsg.empty())
+                ch->broadcast(quitMsg, fd);
+
+            // User'ı kanaldan çıkar
+            ch->removeUser(fd);
+
+            // Kanal boşsa sil (policy)
+            if (ch->isEmpty())
+            {
+                delete ch;
+                std::map<std::string, Channel*>::iterator eraseIt = it++;
+                _channels.erase(eraseIt);
+                continue;
+            }
+        }
+        ++it;
+    }
+}

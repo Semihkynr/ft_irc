@@ -3,16 +3,14 @@
 /*                                                        :::      ::::::::   */
 /*   Channel.cpp                                        :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: teraslan <teraslan@student.42istanbul.c    +#+  +:+       +#+        */
+/*   By: ilknurhancer <ilknurhancer@student.42.f    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/03 14:12:19 by teraslan          #+#    #+#             */
-/*   Updated: 2026/01/03 17:04:33 by teraslan         ###   ########.fr       */
+/*   Updated: 2026/01/11 20:32:46 by ilknurhance      ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "Channel.hpp"
-#include <sys/socket.h> // send için
-#include <cstdlib>
 
 Channel::Channel(const std::string& name, const std::string& password, bool isPrivate, int maxUsers)
     : name(name),
@@ -45,10 +43,14 @@ bool Channel::isInvited(int fd) const {
 
 void Channel::addUser(int fd, Client* client) {
     if(users.empty()) {
-        operators.insert(fd); // İlk kullanıcı operatör olur
+        operators.insert(fd);
     }
     users[fd] = client;
+
+    // INVITE tüketimi: kullanıcı join edince davetini düşür
+    invitedUsers.erase(fd);
 }
+
 
 void Channel::removeUser(int fd) {
     users.erase(fd);
@@ -117,7 +119,7 @@ bool Channel::canJoin(int fd, const std::string& pass) const {
     if (!password.empty() && pass != password)
         return false;
 
-    if (isPrivate && invitedUsers.find(fd) == invitedUsers.end())
+    if (inviteOnlyMode && invitedUsers.find(fd) == invitedUsers.end())
         return false;
 
     return true;
@@ -133,7 +135,7 @@ std::string Channel::getTopic() const {
 }
 
 bool Channel::getIsPrivate() const {
-    return isPrivate;
+    return inviteOnlyMode;
 }
 
 bool Channel::getTopicSet() const {
@@ -226,7 +228,7 @@ bool Channel::applyModeString(int operatorFd, const std::string& modes,
             enable = false;
         } else {
             std::string param;
-            if ((mode == 'k' || mode == 'l') && paramIndex < params.size()) {
+            if ((mode == 'k' || mode == 'l' || mode == 'o') && paramIndex < params.size()) {
                 param = params[paramIndex++];
             }
             if (!setMode(operatorFd, mode, enable, param)) {
@@ -263,6 +265,15 @@ bool Channel::setMode(int operatorFd, char mode, bool enable, const std::string&
             }
             setLimitMode(enable);
             break;
+        case 'o': {
+            int targetFd = std::atoi(param.c_str());
+            if (targetFd <= 0) return false;
+            if (!hasUser(targetFd)) return false;
+
+            if (enable) addOperator(targetFd);
+            else removeOperator(targetFd);
+            break;
+            }
         default:
             return false; // Unknown mode
     }
@@ -273,7 +284,9 @@ bool Channel::setMode(int operatorFd, char mode, bool enable, const std::string&
 
 void Channel::setInviteOnlyMode(bool mode) {
     inviteOnlyMode = mode;
+    isPrivate = mode;
 }
+
 
 void Channel::setTopicOperatorOnlyMode(bool mode) {
     topicOperatorOnlyMode = mode;
