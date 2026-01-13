@@ -114,6 +114,38 @@ void Server::handleJoin(int fd, const std::string& rawParams)
         return;
     }
 
+    // JOIN 0: tüm kanallardan ayrıl (RFC 2812)
+    if (params == "0")
+    {
+        std::vector<std::string> userChans;
+        for (std::map<std::string, Channel*>::iterator it = _channels.begin(); it != _channels.end(); ++it)
+        {
+            if (it->second && it->second->hasUser(fd))
+                userChans.push_back(it->first);
+        }
+
+        for (size_t i = 0; i < userChans.size(); ++i)
+        {
+            std::string chan = userChans[i];
+            std::map<std::string, Channel*>::iterator it = _channels.find(chan);
+            if (it != _channels.end())
+            {
+                Channel* ch = it->second;
+                std::string partMsg = makePrefix(c) + " PART " + chan + " :leaving\r\n";
+                sendNumeric(fd, partMsg);
+                ch->broadcast(partMsg, fd);
+                ch->removeUser(fd);
+
+                if (ch->isEmpty())
+                {
+                    delete ch;
+                    _channels.erase(it);
+                }
+            }
+        }
+        return;
+    }
+
     std::string chanList;
     std::string keyList;
 
