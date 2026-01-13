@@ -855,3 +855,165 @@ void Server::handleMode(int fd, const std::string& rawParams)
     sendNumeric(fd, msg);
     ch->broadcast(msg, fd);
 }
+
+void Server::handleWho(int fd, const std::string& rawParams)
+{
+    Client* c = _clients[fd];
+    if (!c) return;
+
+    std::string params = trimSpaces(rawParams);
+    if (params.empty())
+    {
+        sendNumeric(fd, ":server 461 " + c->getNickname() + " WHO :Not enough parameters\r\n");
+        return;
+    }
+
+    // WHO can be for a channel or a nickname
+    std::string target = params;
+    size_t sp = target.find(' ');
+    if (sp != std::string::npos)
+        target = target.substr(0, sp);
+    target = trimSpaces(target);
+
+    // Check if target is a channel
+    if (!target.empty() && target[0] == '#')
+    {
+        std::map<std::string, Channel*>::iterator it = _channels.find(target);
+        if (it == _channels.end())
+        {
+            sendNumeric(fd, ":server 315 " + c->getNickname() + " " + target + " :End of WHO list\r\n");
+            return;
+        }
+
+        Channel* ch = it->second;
+        const std::map<int, Client*>& users = ch->getUsers();
+
+        for (std::map<int, Client*>::const_iterator uit = users.begin(); uit != users.end(); ++uit)
+        {
+            Client* u = uit->second;
+            if (!u || !u->hasNickname()) continue;
+
+            std::string flags = "H"; // H = here, G = gone (away)
+            if (ch->isOperator(uit->first))
+                flags += "@";
+
+            // RPL_WHOREPLY (352): <channel> <user> <host> <server> <nick> <flags> :<hopcount> <realname>
+            std::string reply = ":server 352 " + c->getNickname() + " " + target + " " +
+                              u->getUsername() + " localhost server " + u->getNickname() + " " +
+                              flags + " :0 " + u->getUsername() + "\r\n";
+            sendNumeric(fd, reply);
+        }
+
+        // RPL_ENDOFWHO (315)
+        sendNumeric(fd, ":server 315 " + c->getNickname() + " " + target + " :End of WHO list\r\n");
+    }
+    else
+    {
+        // WHO for a specific nickname
+        int targetFd = findFdByNick(target);
+        if (targetFd == -1)
+        {
+            sendNumeric(fd, ":server 315 " + c->getNickname() + " " + target + " :End of WHO list\r\n");
+            return;
+        }
+
+        Client* targetClient = _clients[targetFd];
+        if (targetClient && targetClient->hasNickname())
+        {
+            std::string flags = "H"; // Here
+
+            // Find what channels the user is in
+            std::string chanName = "*";
+            for (std::map<std::string, Channel*>::iterator it = _channels.begin(); it != _channels.end(); ++it)
+            {
+                if (it->second && it->second->hasUser(targetFd))
+                {
+                    chanName = it->first;
+                    if (it->second->isOperator(targetFd))
+                        flags += "@";
+                    break;
+                }
+            }
+
+            std::string reply = ":server 352 " + c->getNickname() + " " + chanName + " " +
+                              targetClient->getUsername() + " localhost server " + 
+                              targetClient->getNickname() + " " + flags + " :0 " + 
+                              targetClient->getUsername() + "\r\n";
+            sendNumeric(fd, reply);
+        }
+
+        sendNumeric(fd, ":server 315 " + c->getNickname() + " " + target + " :End of WHO list\r\n");
+    }
+}
+
+void Server::handleWhois(int fd, const std::string& rawParams)
+{
+    Client* c = _clients[fd];
+    if (!c) return;
+
+    std::string params = trimSpaces(rawParams);
+    if (params.empty())
+    {
+        sendNumeric(fd, ":server 431 " + c->getNickname() + " :No nickname given\r\n");
+        return;
+    }
+
+    // Parse nickname (could be comma-separated but we'll handle single for now)
+    std::string targetNick = params;
+    size_t sp = targetNick.find(' ');
+    if (sp != std::string::npos)
+        targetNick = targetNick.substr(0, sp);
+    targetNick = trimSpaces(targetNick);
+
+    int targetFd = findFdByNick(targetNick);
+    if (targetFd == -1)
+    {
+        // ERR_NOSUCHNICK (401)
+        sendNumeric(fd, ":server 401 " + c->getNickname() + " " + targetNick + " :No such nick\r\n");
+        sendNumeric(fd, ":server 318 " + c->getNickname() + " " + targetNick + " :End of WHOIS list\r\n");
+        return;
+    }
+
+    Client* targetClient = _clients[targetFd];
+    if (!targetClient || !targetClient->hasNickname())
+    {
+        sendNumeric(fd, ":server 401 " + c->getNickname() + " " + targetNick + " :No such nick\r\n");
+        sendNumeric(fd, ":server 318 " + c->getNickname() + " " + targetNick + " :End of WHOIS list\r\n");
+        return;
+    }
+
+    // RPL_WHOISUSER (311): <nick> <user> <host> * :<real name>
+    std::string whoisUser = ":server 311 " + c->getNickname() + " " + targetClient->getNickname() + " " +
+                           targetClient->getUsername() + " localhost * :" + targetClient->getUsername() + "\r\n";
+    sendNumeric(fd, whoisUser);
+
+    // RPL_WHOISSERVER (312): <nick> <server> :<server info>
+    std::string whoisServer = ":server 312 " + c->getNickname() + " " + targetClient->getNickname() + 
+                             " server :IRC Server\r\n";
+    sendNumeric(fd, whoisServer);
+
+    // RPL_WHOISCHANNELS (319): <nick> :{[@|+]<channel> }
+    std::string channels;
+    for (std::map<std::string, Channel*>::iterator it = _channels.begin(); it != _channels.end(); ++it)
+    {
+        if (it->second && it->second->hasUser(targetFd))
+        {
+            if (!channels.empty())
+                channels += " ";
+            if (it->second->isOperator(targetFd))
+                channels += "@";
+            channels += it->first;
+        }
+    }
+
+    if (!channels.empty())
+    {
+        std::string whoisChannels = ":server 319 " + c->getNickname() + " " + targetClient->getNickname() + 
+                                   " :" + channels + "\r\n";
+        sendNumeric(fd, whoisChannels);
+    }
+
+    // RPL_ENDOFWHOIS (318)
+    sendNumeric(fd, ":server 318 " + c->getNickname() + " " + targetClient->getNickname() + " :End of WHOIS list\r\n");
+}
+

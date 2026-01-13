@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Client.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: ilknurhancer <ilknurhancer@student.42.f    +#+  +:+       +#+        */
+/*   By: teraslan <teraslan@student.42istanbul.c    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/24 18:42:43 by skaynar           #+#    #+#             */
-/*   Updated: 2026/01/11 19:34:46 by ilknurhance      ###   ########.fr       */
+/*   Updated: 2026/01/13 15:04:49 by teraslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 

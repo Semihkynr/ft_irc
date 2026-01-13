@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Channel.hpp                                        :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: ilknurhancer <ilknurhancer@student.42.f    +#+  +:+       +#+        */
+/*   By: teraslan <teraslan@student.42istanbul.c    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/03 14:12:31 by teraslan          #+#    #+#             */
-/*   Updated: 2026/01/11 20:32:51 by ilknurhance      ###   ########.fr       */
+/*   Updated: 2026/01/13 15:47:21 by teraslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 

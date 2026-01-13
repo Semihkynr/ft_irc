@@ -6,7 +6,7 @@
 /*   By: teraslan <teraslan@student.42istanbul.c    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/24 18:38:15 by skaynar           #+#    #+#             */
-/*   Updated: 2026/01/13 11:36:30 by teraslan         ###   ########.fr       */
+/*   Updated: 2026/01/13 16:39:23 by teraslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -275,6 +275,8 @@ void Server::processCommand(int fd, std::string message)
     else if (command == "KICK")   handleKick(fd, params);
     else if (command == "INVITE") handleInvite(fd, params);
     else if (command == "TOPIC")  handleTopic(fd, params);
+    else if (command == "WHO")    handleWho(fd, params);
+    else if (command == "WHOIS")  handleWhois(fd, params);
     //else if (command == "PING")    handlePing(fd, params);
     //else if (command == "QUIT")    handleQuit(fd, params);
     else

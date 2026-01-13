@@ -6,7 +6,7 @@
 /*   By: teraslan <teraslan@student.42istanbul.c    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/24 18:38:07 by skaynar           #+#    #+#             */
-/*   Updated: 2026/01/13 11:36:31 by teraslan         ###   ########.fr       */
+/*   Updated: 2026/01/13 16:39:24 by teraslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -59,6 +59,8 @@ private:
     void handleKick(int fd, const std::string& params);
     void handleInvite(int fd, const std::string& params);
     void handleTopic(int fd, const std::string& params);
+    void handleWho(int fd, const std::string& params);
+    void handleWhois(int fd, const std::string& params);
 
     // Helpers
     bool isNickInUse(const std::string& nick, int requesterFd) const;
