@@ -6,7 +6,7 @@
 /*   By: teraslan <teraslan@student.42istanbul.c    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/24 18:38:07 by skaynar           #+#    #+#             */
-/*   Updated: 2026/01/13 11:16:14 by teraslan         ###   ########.fr       */
+/*   Updated: 2026/01/13 11:36:31 by teraslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -55,6 +55,7 @@ private:
     void handleQuit(int fd, const std::string& params);
 
     void handleMode(int fd, const std::string& params);
+        void handleList(int fd, const std::string& params);
     void handleKick(int fd, const std::string& params);
     void handleInvite(int fd, const std::string& params);
     void handleTopic(int fd, const std::string& params);

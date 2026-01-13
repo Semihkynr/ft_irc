@@ -382,6 +382,55 @@ void Server::handleNames(int fd, const std::string& rawParams)
     }
 }
 
+void Server::handleList(int fd, const std::string& rawParams)
+{
+    Client* c = _clients[fd];
+    if (!c)
+        return;
+
+    std::string params = trimSpaces(rawParams);
+
+    // RPL_LISTSTART
+    sendNumeric(fd, ":server 321 " + c->getNickname() + " Channel :Users Name\r\n");
+
+    std::vector<std::string> targets;
+    if (params.empty())
+    {
+        for (std::map<std::string, Channel*>::iterator it = _channels.begin(); it != _channels.end(); ++it)
+            targets.push_back(it->first);
+    }
+    else
+    {
+        size_t start = 0;
+        while (start < params.size())
+        {
+            size_t comma = params.find(',', start);
+            std::string one = (comma == std::string::npos) ? params.substr(start) : params.substr(start, comma - start);
+            one = trimSpaces(one);
+            if (!one.empty())
+                targets.push_back(one);
+            if (comma == std::string::npos)
+                break;
+            start = comma + 1;
+        }
+    }
+
+    for (size_t i = 0; i < targets.size(); ++i)
+    {
+        std::string chanName = targets[i];
+        std::map<std::string, Channel*>::iterator it = _channels.find(chanName);
+        if (it == _channels.end())
+            continue;
+
+        Channel* ch = it->second;
+        std::string topic = ch->getTopic();
+        sendNumeric(fd, ":server 322 " + c->getNickname() + " " + chanName + " " + intToString(ch->getUserCount()) + " :" + topic + "\r\n");
+    }
+
+    // RPL_LISTEND
+    sendNumeric(fd, ":server 323 " + c->getNickname() + " :End of /LIST\r\n");
+}
+
 void Server::handlePart(int fd, const std::string& rawParams)
 {
     Client* c = _clients[fd];

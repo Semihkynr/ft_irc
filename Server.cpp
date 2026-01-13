@@ -6,7 +6,7 @@
 /*   By: teraslan <teraslan@student.42istanbul.c    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/24 18:38:15 by skaynar           #+#    #+#             */
-/*   Updated: 2026/01/13 11:16:13 by teraslan         ###   ########.fr       */
+/*   Updated: 2026/01/13 11:36:30 by teraslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -269,6 +269,7 @@ void Server::processCommand(int fd, std::string message)
     else if (command == "JOIN")    handleJoin(fd, params);
     else if (command == "PRIVMSG") handlePrivmsg(fd, params);
     else if (command == "NAMES")   handleNames(fd, params);
+    else if (command == "LIST")    handleList(fd, params);
     else if (command == "PART")    handlePart(fd, params);
     else if (command == "MODE")   handleMode(fd, params);
     else if (command == "KICK")   handleKick(fd, params);
