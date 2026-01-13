@@ -316,6 +316,90 @@ void Server::handlePrivmsg(int fd, const std::string& rawParams)
     sendNumeric(toFd, msg);
 }
 
+void Server::handlePart(int fd, const std::string& rawParams)
+{
+    Client* c = _clients[fd];
+    if (!c)
+        return;
+
+    std::string params = trimSpaces(rawParams);
+    if (params.empty())
+    {
+        sendNumeric(fd, ":server 461 " + c->getNickname() + " PART :Not enough parameters\r\n");
+        return;
+    }
+
+    // PART <channel>{,<channel>} [:<reason>]
+    std::string chanList;
+    std::string reason;
+
+    size_t sp = params.find(' ');
+    if (sp == std::string::npos)
+        chanList = params;
+    else
+    {
+        chanList = trimSpaces(params.substr(0, sp));
+        reason = trimSpaces(params.substr(sp + 1));
+        if (!reason.empty() && reason[0] == ':')
+            reason = reason.substr(1);
+    }
+
+    if (reason.empty())
+        reason = "Leaving";
+
+    // Parse channel list (comma-separated)
+    std::vector<std::string> chans;
+    size_t start = 0;
+    while (start < chanList.size())
+    {
+        size_t comma = chanList.find(',', start);
+        std::string one = (comma == std::string::npos) ? chanList.substr(start) : chanList.substr(start, comma - start);
+        one = trimSpaces(one);
+        if (!one.empty())
+            chans.push_back(one);
+        if (comma == std::string::npos)
+            break;
+        start = comma + 1;
+    }
+
+    for (size_t i = 0; i < chans.size(); ++i)
+    {
+        std::string chan = chans[i];
+
+        // Check if channel exists
+        std::map<std::string, Channel*>::iterator it = _channels.find(chan);
+        if (it == _channels.end())
+        {
+            sendNumeric(fd, ":server 403 " + c->getNickname() + " " + chan + " :No such channel\r\n");
+            continue;
+        }
+
+        Channel* ch = it->second;
+
+        // Check if user is in channel
+        if (!ch->hasUser(fd))
+        {
+            sendNumeric(fd, ":server 442 " + c->getNickname() + " " + chan + " :You're not on that channel\r\n");
+            continue;
+        }
+
+        // Send PART message to all users in channel (including sender)
+        std::string partMsg = makePrefix(c) + " PART " + chan + " :" + reason + "\r\n";
+        sendNumeric(fd, partMsg);
+        ch->broadcast(partMsg, fd);
+
+        // Remove user from channel
+        ch->removeUser(fd);
+
+        // Delete channel if empty
+        if (ch->isEmpty())
+        {
+            delete ch;
+            _channels.erase(it);
+        }
+    }
+}
+
 void Server::handleQuit(int fd, const std::string& rawParams)
 {
     Client* c = _clients[fd];

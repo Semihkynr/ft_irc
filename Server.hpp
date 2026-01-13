@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Server.hpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: ilknurhancer <ilknurhancer@student.42.f    +#+  +:+       +#+        */
+/*   By: teraslan <teraslan@student.42istanbul.c    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/24 18:38:07 by skaynar           #+#    #+#             */
-/*   Updated: 2026/01/11 20:24:41 by ilknurhance      ###   ########.fr       */
+/*   Updated: 2026/01/13 10:49:47 by teraslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -49,6 +49,7 @@ private:
     void handleUser(int fd, const std::string& params);
     void handleJoin(int fd, const std::string& params);
     void handlePrivmsg(int fd, const std::string& params);
+    void handlePart(int fd, const std::string& params);
     //void handlePing(int fd, const std::string& params);
     void handleQuit(int fd, const std::string& params);
 
@@ -66,7 +67,6 @@ private:
     std::string makePrefix(Client* c) const;
     void        sendNumeric(int fd, const std::string& msg);
     int findFdByNick(const std::string& nick) const;
-    std::string intToString(int v);
     
     void removeClientFromAllChannels(int fd, const std::string& quitMsg);
 
@@ -81,5 +81,8 @@ public:
     void    init();
     void    run();
 };
+
+// Helper function
+std::string intToString(int v);
 
 #endif
