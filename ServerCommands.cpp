@@ -316,6 +316,72 @@ void Server::handlePrivmsg(int fd, const std::string& rawParams)
     sendNumeric(toFd, msg);
 }
 
+void Server::handleNames(int fd, const std::string& rawParams)
+{
+    Client* c = _clients[fd];
+    if (!c)
+        return;
+
+    std::string params = trimSpaces(rawParams);
+    std::vector<std::string> targets;
+
+    if (params.empty())
+    {
+        if (_channels.empty())
+        {
+            sendNumeric(fd, ":server 366 " + c->getNickname() + " * :End of /NAMES list.\r\n");
+            return;
+        }
+        for (std::map<std::string, Channel*>::iterator it = _channels.begin(); it != _channels.end(); ++it)
+            targets.push_back(it->first);
+    }
+    else
+    {
+        size_t start = 0;
+        while (start < params.size())
+        {
+            size_t comma = params.find(',', start);
+            std::string one = (comma == std::string::npos) ? params.substr(start) : params.substr(start, comma - start);
+            one = trimSpaces(one);
+            if (!one.empty())
+                targets.push_back(one);
+            if (comma == std::string::npos)
+                break;
+            start = comma + 1;
+        }
+    }
+
+    for (size_t i = 0; i < targets.size(); ++i)
+    {
+        std::string chanName = targets[i];
+        std::map<std::string, Channel*>::iterator it = _channels.find(chanName);
+        if (it == _channels.end())
+        {
+            sendNumeric(fd, ":server 366 " + c->getNickname() + " " + chanName + " :End of /NAMES list.\r\n");
+            continue;
+        }
+
+        Channel* ch = it->second;
+        std::string names;
+        const std::map<int, Client*>& users = ch->getUsers();
+        for (std::map<int, Client*>::const_iterator uit = users.begin(); uit != users.end(); ++uit)
+        {
+            Client* u = uit->second;
+            if (u && u->hasNickname())
+            {
+                if (!names.empty())
+                    names += " ";
+                if (ch->isOperator(uit->first))
+                    names += "@";
+                names += u->getNickname();
+            }
+        }
+
+        sendNumeric(fd, ":server 353 " + c->getNickname() + " = " + chanName + " :" + names + "\r\n");
+        sendNumeric(fd, ":server 366 " + c->getNickname() + " " + chanName + " :End of /NAMES list.\r\n");
+    }
+}
+
 void Server::handlePart(int fd, const std::string& rawParams)
 {
     Client* c = _clients[fd];
