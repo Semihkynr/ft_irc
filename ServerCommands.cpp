@@ -2,6 +2,10 @@
 
 void Server::handlePass(int fd, const std::string& rawParams)
 {
+
+    if (_clients.find(fd) == _clients.end() || !_clients[fd])
+        return;
+
     std::string params = trimSpaces(rawParams);
     if(_clients[fd]->isAuthenticated())
     {
@@ -34,6 +38,9 @@ void Server::handlePass(int fd, const std::string& rawParams)
 
 void Server::handleNick(int fd, const std::string& rawParams)
 {
+    if (_clients.find(fd) == _clients.end() || !_clients[fd])
+        return;
+
     Client* c = _clients[fd];
     if (!c)
         return;
@@ -54,6 +61,37 @@ void Server::handleNick(int fd, const std::string& rawParams)
         return;
     }
 
+    // Check nickname format (RFC 2812)
+    // Nick must be 1-9 chars, first char must be letter
+    if (nick.length() < 1 || nick.length() > 9)
+    {
+        std::string err = ":server 432 * " + nick + " :Erroneous nickname\r\n";
+        send(fd, err.c_str(), err.length(), 0);
+        return;
+    }
+    
+    // First character must be a letter (RFC 2812)
+    if (!((nick[0] >= 'a' && nick[0] <= 'z') || (nick[0] >= 'A' && nick[0] <= 'Z')))
+    {
+        std::string err = ":server 432 * " + nick + " :Erroneous nickname\r\n";
+        send(fd, err.c_str(), err.length(), 0);
+        return;
+    }
+    
+    // Check for invalid characters (can be letter, digit, or special: - [ ] \ ` ^ { | })
+    for (size_t i = 0; i < nick.length(); ++i)
+    {
+        char c = nick[i];
+        if (!((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || 
+            (c >= '0' && c <= '9') || c == '-' || c == '[' || 
+            c == ']' || c == '{' || c == '}' || c == '\\' || c == '|' || c == '`' || c == '^'))
+        {
+            std::string err = ":server 432 * " + nick + " :Erroneous nickname\r\n";
+            send(fd, err.c_str(), err.length(), 0);
+            return;
+        }
+    }
+
     if (isNickInUse(nick, fd))
     {
         std::string err = ":server 433 * " + nick + " :Nickname is already in use\r\n";
@@ -61,18 +99,28 @@ void Server::handleNick(int fd, const std::string& rawParams)
         return;
     }
 
-    std::string oldPrefix = c->hasNickname() ? c->getNickname() : "*";
+    std::string oldNick = c->hasNickname() ? c->getNickname() : c->getUsername();
+    std::string oldPrefix = makePrefix(c);  // Full prefix with user@host
     c->setNickname(nick);
 
-    std::string reply = ":" + oldPrefix + " NICK :" + nick + "\r\n";
-    send(fd, reply.c_str(), reply.length(), 0);
+    std::string reply = oldPrefix + " NICK :" + nick + "\r\n";
+    sendNumeric(fd, reply);
 
+    // Other clients in same channel should also get this
+    for (std::map<std::string, Channel*>::iterator it = _channels.begin(); it != _channels.end(); ++it) {
+        if (it->second && it->second->hasUser(fd)) {
+            it->second->broadcast(reply, fd);
+        }
+    }
     tryRegister(fd);
 }
 
 
 void Server::handleUser(int fd, const std::string& rawParams)
 {
+    if (_clients.find(fd) == _clients.end() || !_clients[fd])
+        return;
+    
     Client* c = _clients[fd];
     if (!c)
         return;
@@ -199,10 +247,27 @@ void Server::handleJoin(int fd, const std::string& rawParams)
             continue;
         }
 
+        // Channel name length check (max 50)
+        if (chan.length() > 50)
+        {
+            sendNumeric(fd, ":server 403 " + c->getNickname() + " " + chan + " :Channel name too long\r\n");
+            continue;
+        }
+
+        // Check for spaces, commas, ctrl characters
+        for (size_t i = 1; i < chan.length(); ++i)
+        {
+            if (chan[i] == ' ' || chan[i] == ',' || chan[i] == 7 || chan[i] < 32)
+            {
+                sendNumeric(fd, ":server 403 " + c->getNickname() + " " + chan + " :Invalid channel name\r\n");
+                continue;
+            }
+        }
+
         // Channel var mı? yoksa oluştur
         if (_channels.find(chan) == _channels.end())
         {
-            _channels[chan] = new Channel(chan, key, false, 100);
+            _channels[chan] = new Channel(chan, key, 100);
         }
 
         Channel* ch = _channels[chan];
@@ -241,12 +306,12 @@ void Server::handleJoin(int fd, const std::string& rawParams)
 
         std::string names;
         const std::map<int, Client*>& users = ch->getUsers();
-        for (std::map<int, Client*>::const_iterator it = users.begin(); it != users.end(); ++it)
-        {
-            if (it->second && it->second->hasNickname())
-            {
+        for (std::map<int, Client*>::const_iterator it = users.begin(); it != users.end(); ++it) {
+            if (it->second && it->second->hasNickname()) {
                 if (!names.empty())
                     names += " ";
+                if (ch->isOperator(it->first))  // ✅ Operator check ekle
+                    names += "@";
                 names += it->second->getNickname();
             }
         }
@@ -329,15 +394,7 @@ void Server::handlePrivmsg(int fd, const std::string& rawParams)
         return;
     }
 
-    int toFd = -1;
-    for (std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); ++it)
-    {
-        if (it->second && it->second->hasNickname() && it->second->getNickname() == target)
-        {
-            toFd = it->first;
-            break;
-        }
-    }
+    int toFd = findFdByNick(target);
 
     if (toFd == -1)
     {
@@ -737,13 +794,14 @@ void Server::handleKick(int fd, const std::string& rawParams)
     }
 
     std::string msg = makePrefix(c) + " KICK " + chan + " " + nick + " :" + reason + "\r\n";
-    sendNumeric(fd, msg);
-    ch->broadcast(msg, fd);
-    sendNumeric(targetFd, msg);
 
-    // kanal boşsa sil (policy)
-    if (ch->isEmpty())
-    {
+    // Mesajı gönder
+    sendNumeric(fd, msg);
+    sendNumeric(targetFd, msg);
+    ch->broadcast(msg, -1);  // ← -1 = herkese (sender dahil değil zaten broadcast'ta)
+
+    // Kanal boşsa sil
+    if (ch->isEmpty()) {
         delete ch;
         _channels.erase(it);
     }
@@ -807,14 +865,19 @@ void Server::handleMode(int fd, const std::string& rawParams)
     // k,l,o için birer parametre gerekir.
     // o parametresi IRC’de nick; burada nick->fd çevireceğiz.
     std::vector<std::string> paramsForChannel;
-    bool sign = true;
     size_t rawIdx = 0;
 
     for (size_t i = 0; i < modeStr.size(); ++i)
     {
         char m = modeStr[i];
-        if (m == '+' || m == '-') continue;
-
+        if (m == '+') {
+            continue;
+        }
+        if (m == '-')
+        {
+            continue;
+        }
+        
         if (m == 'k' || m == 'l' || m == 'o')
         {
             if (rawIdx >= rawModeParams.size())
@@ -834,6 +897,31 @@ void Server::handleMode(int fd, const std::string& rawParams)
                     return;
                 }
                 p = intToString(targetFd); // Channel'a fd olarak ver
+            }
+            else if (m == 'l')
+            {
+                // +l parametresi sayısal olmalı ve pozitif
+                bool isNumeric = !p.empty();
+                for (size_t j = 0; j < p.length(); ++j) {
+                    if (p[j] < '0' || p[j] > '9') {
+                        isNumeric = false;
+                        break;
+                    }
+                }
+                if (!isNumeric || p.empty() || std::atoi(p.c_str()) <= 0)
+                {
+                    sendNumeric(fd, ":server 471 " + c->getNickname() + " " + chan + " :Invalid limit parameter\r\n");
+                    return;
+                }
+            }
+            else if (m == 'k')
+            {
+                // +k parametresi boş olmamalı
+                if (p.empty())
+                {
+                    sendNumeric(fd, ":server 461 " + c->getNickname() + " MODE :Empty key provided\r\n");
+                    return;
+                }
             }
 
             paramsForChannel.push_back(p);
@@ -1017,3 +1105,11 @@ void Server::handleWhois(int fd, const std::string& rawParams)
     sendNumeric(fd, ":server 318 " + c->getNickname() + " " + targetClient->getNickname() + " :End of WHOIS list\r\n");
 }
 
+void Server::handlePing(int fd, const std::string& rawParams) {
+    Client* c = _clients[fd];
+    if (!c) return;
+    
+    std::string params = trimSpaces(rawParams);
+    std::string msg = ":server PONG :" + (params.empty() ? "server" : params) + "\r\n";
+    sendNumeric(fd, msg);
+}

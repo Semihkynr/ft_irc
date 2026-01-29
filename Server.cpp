@@ -223,6 +223,10 @@ void Server::processCommand(int fd, std::string message)
     if (message.empty())
         return;
 
+    // Check map first
+    if (_clients.find(fd) == _clients.end() || !_clients[fd])
+        return;
+
     if (!message.empty() && message[message.size() - 1] == '\r')
         message.erase(message.size() - 1);
 
@@ -277,8 +281,8 @@ void Server::processCommand(int fd, std::string message)
     else if (command == "TOPIC")  handleTopic(fd, params);
     else if (command == "WHO")    handleWho(fd, params);
     else if (command == "WHOIS")  handleWhois(fd, params);
-    //else if (command == "PING")    handlePing(fd, params);
-    //else if (command == "QUIT")    handleQuit(fd, params);
+    else if (command == "PING")    handlePing(fd, params);
+    else if (command == "QUIT")    handleQuit(fd, params);
     else
     {
         std::string error = "ERROR :Unknown command\r\n";

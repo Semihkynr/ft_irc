@@ -12,14 +12,13 @@
 
 #include "Channel.hpp"
 
-Channel::Channel(const std::string& name, const std::string& password, bool isPrivate, int maxUsers)
+Channel::Channel(const std::string& name, const std::string& password, int maxUsers)
     : name(name),
       topic(),
       password(password),
-      isPrivate(isPrivate),
       topicSet(false),
       maxUsers(maxUsers),
-      inviteOnlyMode(isPrivate),
+      inviteOnlyMode(false),  // MODE +i ile set et
       topicOperatorOnlyMode(false),
       keyMode(!password.empty()),
       limitMode(maxUsers > 0)
@@ -92,9 +91,12 @@ bool Channel::changeTopic(int operatorFd, const std::string& newTopic) {
 //kanaldaki herkese mesaj
 void Channel::broadcast(const std::string& message, int senderFd) {
     for (std::map<int, Client*>::const_iterator it = users.begin(); it != users.end(); ++it) {
-        std::cout << "Send to fd: " << it->first << std::endl;
-        if (it->first != senderFd) {
-            send(it->first, message.c_str(), message.length(), 0);
+        // senderFd == -1 ise herkese gönder
+        if (senderFd == -1 || it->first != senderFd) {
+            ssize_t result = send(it->first, message.c_str(), message.length(), 0);
+            if (result < 0) {
+                std::cerr << "Send failed to fd " << it->first << std::endl;
+            }
         }
     }
 }
@@ -284,7 +286,6 @@ bool Channel::setMode(int operatorFd, char mode, bool enable, const std::string&
 
 void Channel::setInviteOnlyMode(bool mode) {
     inviteOnlyMode = mode;
-    isPrivate = mode;
 }
 
 

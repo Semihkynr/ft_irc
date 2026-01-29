@@ -8,7 +8,8 @@ bool Server::isNickInUse(const std::string& nick, int requesterFd) const
         int fd = it->first;
         Client* c = it->second;
 
-        if (fd != requesterFd && c && c->hasNickname() && c->getNickname() == nick)
+        //irc nicknames are case-insensitive
+        if (fd != requesterFd && c && c->hasNickname() && toUpper(c->getNickname()) == toUpper(nick))
             return true;
 
         ++it;
@@ -94,14 +95,19 @@ std::string Server::makePrefix(Client* c) const
 
 void Server::sendNumeric(int fd, const std::string& msg)
 {
-    send(fd, msg.c_str(), msg.length(), 0);
+    ssize_t result = send(fd, msg.c_str(), msg.length(), 0);
+    if (result < 0) {
+        std::cerr << "Send failed to fd " << fd << std::endl;
+    }
 }
 
 int Server::findFdByNick(const std::string& nick) const
 {
-    for (std::map<int, Client*>::const_iterator it = _clients.begin(); it != _clients.end(); ++it)
-    {
-        if (it->second && it->second->hasNickname() && it->second->getNickname() == nick)
+    //irc nicknames are case-insensitive
+    std::string lowerNick = toUpper(nick);  // or toLower
+    for (std::map<int, Client*>::const_iterator it = _clients.begin(); it != _clients.end(); ++it) {
+        if (it->second && it->second->hasNickname() && 
+            toUpper(it->second->getNickname()) == lowerNick)
             return it->first;
     }
     return -1;

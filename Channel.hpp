@@ -29,7 +29,6 @@ class Channel {
         std::string topic;//+t mode açıksa sadece operatorler değiştirebilir.onun kontrolünü ekle
         std::string password;//+k aktifse girişte istenir
 
-        bool       isPrivate;//lazım mı emin değilim +i mode için. invite only mode için lazım
         bool       topicSet;//topic daha önce ayarlandı mı kontrolü için
         int        maxUsers;//+l mode için kullanıcı limiti
         bool       inviteOnlyMode; //+i
@@ -42,7 +41,7 @@ class Channel {
         std::set<int> invitedUsers; //+i aktifken kullanılır kullanıcı giriş yaptıktan sonra bu listeden silinir
 
     public:
-        Channel(const std::string& name, const std::string& password, bool isPrivate, int maxUsers);
+        Channel(const std::string& name, const std::string& password, int maxUsers);
         ~Channel();
 
         bool hasUser(int fd) const;

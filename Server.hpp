@@ -51,7 +51,6 @@ private:
     void handlePrivmsg(int fd, const std::string& params);
     void handleNames(int fd, const std::string& params);
     void handlePart(int fd, const std::string& params);
-    //void handlePing(int fd, const std::string& params);
     void handleQuit(int fd, const std::string& params);
 
     void handleMode(int fd, const std::string& params);
@@ -61,6 +60,7 @@ private:
     void handleTopic(int fd, const std::string& params);
     void handleWho(int fd, const std::string& params);
     void handleWhois(int fd, const std::string& params);
+    void handlePing(int fd, const std::string& params);
 
     // Helpers
     bool isNickInUse(const std::string& nick, int requesterFd) const;
