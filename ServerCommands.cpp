@@ -255,15 +255,23 @@ void Server::handleJoin(int fd, const std::string& rawParams)
         }
 
         // Check for spaces, commas, ctrl characters
-        for (size_t i = 1; i < chan.length(); ++i)
+        bool invalid = false;
+        for (size_t j = 1; j < chan.length(); ++j)
         {
-            if (chan[i] == ' ' || chan[i] == ',' || chan[i] == 7 || chan[i] < 32)
+            unsigned char ch = static_cast<unsigned char>(chan[j]);
+            if (chan[j] == ' ' || chan[j] == ',' || chan[j] == 7 || ch < 32)
             {
-                sendNumeric(fd, ":server 403 " + c->getNickname() + " " + chan + " :Invalid channel name\r\n");
-                continue;
+                invalid = true;
+                break;
             }
         }
-
+    
+        if (invalid)
+        {
+            sendNumeric(fd, ":server 403 " + c->getNickname() + " " + chan + " :Invalid channel name\r\n");
+            continue;
+        }
+    
         // Channel var mı? yoksa oluştur
         if (_channels.find(chan) == _channels.end())
         {
@@ -798,7 +806,7 @@ void Server::handleKick(int fd, const std::string& rawParams)
     // Mesajı gönder
     sendNumeric(fd, msg);
     sendNumeric(targetFd, msg);
-    ch->broadcast(msg, -1);  // ← -1 = herkese (sender dahil değil zaten broadcast'ta)
+    ch->broadcast(msg, fd);  // ← -1 = herkese (sender dahil değil zaten broadcast'ta)
 
     // Kanal boşsa sil
     if (ch->isEmpty()) {
@@ -861,24 +869,22 @@ void Server::handleMode(int fd, const std::string& rawParams)
         paramStr = trimSpaces(paramStr.substr(psp + 1));
     }
 
-    // Channel.applyModeString paramları:
-    // k,l,o için birer parametre gerekir.
-    // o parametresi IRC’de nick; burada nick->fd çevireceğiz.
     std::vector<std::string> paramsForChannel;
     size_t rawIdx = 0;
+
+    char sign = '+';
 
     for (size_t i = 0; i < modeStr.size(); ++i)
     {
         char m = modeStr[i];
-        if (m == '+') {
-            continue;
-        }
-        if (m == '-')
-        {
-            continue;
-        }
-        
-        if (m == 'k' || m == 'l' || m == 'o')
+        if (m == '+' || m == '-') { sign = m; continue; }
+
+        bool needsParam = false;
+        if (m == 'o') needsParam = true;
+        else if (m == 'k') needsParam = (sign == '+'); // +k ister, -k istemez
+        else if (m == 'l') needsParam = (sign == '+'); // +l ister, -l istemez
+
+        if (needsParam)
         {
             if (rawIdx >= rawModeParams.size())
             {
@@ -896,27 +902,22 @@ void Server::handleMode(int fd, const std::string& rawParams)
                     sendNumeric(fd, ":server 401 " + c->getNickname() + " " + p + " :No such nick\r\n");
                     return;
                 }
-                p = intToString(targetFd); // Channel'a fd olarak ver
+                p = intToString(targetFd);
             }
             else if (m == 'l')
             {
-                // +l parametresi sayısal olmalı ve pozitif
                 bool isNumeric = !p.empty();
-                for (size_t j = 0; j < p.length(); ++j) {
-                    if (p[j] < '0' || p[j] > '9') {
-                        isNumeric = false;
-                        break;
-                    }
-                }
-                if (!isNumeric || p.empty() || std::atoi(p.c_str()) <= 0)
+                for (size_t j = 0; j < p.length(); ++j)
+                    if (p[j] < '0' || p[j] > '9') { isNumeric = false; break; }
+
+                if (!isNumeric || std::atoi(p.c_str()) <= 0)
                 {
-                    sendNumeric(fd, ":server 471 " + c->getNickname() + " " + chan + " :Invalid limit parameter\r\n");
+                    sendNumeric(fd, ":server 461 " + c->getNickname() + " MODE :Invalid limit parameter\r\n");
                     return;
                 }
             }
             else if (m == 'k')
             {
-                // +k parametresi boş olmamalı
                 if (p.empty())
                 {
                     sendNumeric(fd, ":server 461 " + c->getNickname() + " MODE :Empty key provided\r\n");
@@ -927,6 +928,7 @@ void Server::handleMode(int fd, const std::string& rawParams)
             paramsForChannel.push_back(p);
         }
     }
+
 
     if (!ch->applyModeString(fd, modeStr, paramsForChannel))
     {

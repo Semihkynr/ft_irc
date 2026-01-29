@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Server.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: teraslan <teraslan@student.42istanbul.c    +#+  +:+       +#+        */
+/*   By: ilknurhancer <ilknurhancer@student.42.f    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/24 18:38:15 by skaynar           #+#    #+#             */
-/*   Updated: 2026/01/13 16:39:23 by teraslan         ###   ########.fr       */
+/*   Updated: 2026/01/29 15:55:04 by ilknurhance      ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -87,16 +87,21 @@ void Server::run()
             break;       // gerçek hata
         }
 
-        for (size_t i = 0; i < _pollFds.size(); ++i)
-        {
-            if (_pollFds[i].revents & POLLIN)
-            {
-                if (_pollFds[i].fd == _serverFd)
-                    acceptNewClient();
-                else
-                    handleClientData(_pollFds[i].fd);
-            }
-        }
+    for (size_t i = 0; i < _pollFds.size(); ++i)
+    {
+        if (!(_pollFds[i].revents & POLLIN))
+            continue;
+
+        int curFd = _pollFds[i].fd;
+
+        if (curFd == _serverFd)
+            acceptNewClient();
+        else
+            handleClientData(curFd);
+        // _pollFds değişmiş olabilir (disconnect/accept). Güvenli olmak için çık.
+        break;
+    }
+
     }
 }
 
