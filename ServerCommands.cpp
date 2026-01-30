@@ -600,8 +600,17 @@ void Server::handlePart(int fd, const std::string& rawParams)
         sendNumeric(fd, partMsg);
         ch->broadcast(partMsg, fd);
 
+        // Check if the leaving user is an operator
+        bool wasOperator = ch->isOperator(fd);
+
         // Remove user from channel
         ch->removeUser(fd);
+
+        // If an operator left and there are still users in the channel, promote a new operator
+        if (wasOperator && !ch->isEmpty())
+        {
+            ch->promoteNewOperator();
+        }
 
         // Delete channel if empty
         if (ch->isEmpty())

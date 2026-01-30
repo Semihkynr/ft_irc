@@ -132,8 +132,17 @@ void Server::removeClientFromAllChannels(int fd, const std::string& quitMsg)
             if (!quitMsg.empty())
                 ch->broadcast(quitMsg, fd);
 
+            // Check if the leaving user is an operator
+            bool wasOperator = ch->isOperator(fd);
+
             // User'ı kanaldan çıkar
             ch->removeUser(fd);
+
+            // If an operator left and there are still users in the channel, promote a new operator
+            if (wasOperator && !ch->isEmpty())
+            {
+                ch->promoteNewOperator();
+            }
 
             // Kanal boşsa sil (policy)
             if (ch->isEmpty())

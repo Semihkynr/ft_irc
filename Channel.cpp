@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Channel.cpp                                        :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: ilknurhancer <ilknurhancer@student.42.f    +#+  +:+       +#+        */
+/*   By: teraslan <teraslan@student.42istanbul.c    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/03 14:12:19 by teraslan          #+#    #+#             */
-/*   Updated: 2026/01/11 20:32:46 by ilknurhance      ###   ########.fr       */
+/*   Updated: 2026/01/30 14:54:16 by teraslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -55,6 +55,14 @@ void Channel::removeUser(int fd) {
     users.erase(fd);
     operators.erase(fd);
     invitedUsers.erase(fd);
+}
+
+void Channel::promoteNewOperator() {
+    // Eğer hiç operator yoksa ve kullanıcı varsa, ilk kullanıcıyı operator yap
+    if (operators.empty() && !users.empty()) {
+        int newOperatorFd = users.begin()->first;
+        operators.insert(newOperatorFd);
+    }
 }
 
 //+o mode için

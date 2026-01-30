@@ -6,7 +6,7 @@
 /*   By: teraslan <teraslan@student.42istanbul.c    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/03 14:12:31 by teraslan          #+#    #+#             */
-/*   Updated: 2026/01/13 15:47:21 by teraslan         ###   ########.fr       */
+/*   Updated: 2026/01/30 14:54:15 by teraslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -50,6 +50,7 @@ class Channel {
 
         void addUser(int fd,Client* client);
         void removeUser(int fd);
+        void promoteNewOperator();
 
         //+o mode için
         void addOperator(int fd);
