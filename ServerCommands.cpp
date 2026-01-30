@@ -804,11 +804,21 @@ void Server::handleKick(int fd, const std::string& rawParams)
         return;
     }
 
-    if (!ch->kickUser(fd, targetFd))
+    // Check if target user is in the channel
+    if (!ch->hasUser(targetFd))
+    {
+        sendNumeric(fd, ":server 441 " + c->getNickname() + " " + nick + " " + chan + " :They aren't on that channel\r\n");
+        return;
+    }
+
+    // Check if kicker is an operator
+    if (!ch->canKick(fd))
     {
         sendNumeric(fd, ":server 482 " + c->getNickname() + " " + chan + " :You're not channel operator\r\n");
         return;
     }
+
+    ch->kickUser(fd, targetFd);
 
     std::string msg = makePrefix(c) + " KICK " + chan + " " + nick + " :" + reason + "\r\n";
 
