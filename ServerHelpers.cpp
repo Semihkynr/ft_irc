@@ -58,12 +58,17 @@ void Server::sendWelcome(int fd)
 
     std::string m2 = ":server 002 " + nick + " :Your host is server, running version 0.1\r\n";
     std::string m3 = ":server 003 " + nick + " :This server was created today\r\n";
-    std::string m4 = ":server 004 " + nick + " server 0.1 o o\r\n";
+    std::string m4 = ":server 004 " + nick + " server 0.1 oiws obtkmlvsn\r\n";
+
+    // 🔥 KVIrc İÇİN KRİTİK SATIR
+    std::string m5 = ":server 005 " + nick +
+        " CHANMODES=b,k,l,imnst PREFIX=(ov)@+ NETWORK=LocalNet :are supported\r\n";
 
     send(fd, m1.c_str(), m1.length(), 0);
     send(fd, m2.c_str(), m2.length(), 0);
     send(fd, m3.c_str(), m3.length(), 0);
     send(fd, m4.c_str(), m4.length(), 0);
+    send(fd, m5.c_str(), m5.length(), 0);
 }
 
 void Server::tryRegister(int fd)
