@@ -6,7 +6,7 @@
 /*   By: ilknurhancer <ilknurhancer@student.42.f    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/24 18:38:15 by skaynar           #+#    #+#             */
-/*   Updated: 2026/01/29 15:55:04 by ilknurhance      ###   ########.fr       */
+/*   Updated: 2026/01/30 13:23:10 by ilknurhance      ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -213,9 +213,12 @@ void Server::handleClientData(int fd)
         {
             std::string cmd = currentBuffer.substr(0, pos);
             processCommand(fd, cmd);
+            if (_clients.find(fd) == _clients.end())
+                return;
             currentBuffer.erase(0, pos + 1);
         }
-
+        if (_clients.find(fd) == _clients.end())
+            return;
         _clients[fd]->clearBuffer();
         _clients[fd]->addBuffer(currentBuffer);
     }
