@@ -1,26 +1,27 @@
-NAME        = ircserv
-CXX         = c++
-CXXFLAGS    = -std=c++98 -Wall -Wextra -Werror
+NAME = ircserv
+CXX = c++
+CXXFLAGS = -Wall -Wextra -Werror -std=c++98 -Iinclude
 
-SRCS = main.cpp \
-       Server.cpp ServerHelpers.cpp AuthCommands.cpp ChannelCommands.cpp\
-       MessagingCommands.cpp Client.cpp Channel.cpp
-OBJS        = $(SRCS:.cpp=.o)
+SRCS =  src/main.cpp \
+        src/Server.cpp \
+        src/ServerHelpers.cpp \
+        src/Client.cpp \
+        src/Channel.cpp \
+        src/commands/AuthCommands.cpp \
+        src/commands/ChannelCommands.cpp \
+        src/commands/MessagingCommands.cpp
+
+OBJS = $(SRCS:.cpp=.o)
 
 all: $(NAME)
 
 $(NAME): $(OBJS)
-	@$(CXX) $(CXXFLAGS) $(OBJS) -o $(NAME)
-
-%.o: %.cpp
-	@$(CXX) $(CXXFLAGS) -c $< -o $@
+	$(CXX) $(CXXFLAGS) $(OBJS) -o $(NAME)
 
 clean:
-	@rm -f $(OBJS)
+	rm -f $(OBJS)
 
 fclean: clean
-	@rm -f $(NAME)
+	rm -f $(NAME)
 
 re: fclean all
-
-.PHONY: all clean fclean re

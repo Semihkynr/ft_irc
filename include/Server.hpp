@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Server.hpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: ihancer <ihancer@student.42istanbul.com    +#+  +:+       +#+        */
+/*   By: ilknurhancer <ilknurhancer@student.42.f    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/24 18:38:07 by skaynar           #+#    #+#             */
-/*   Updated: 2026/01/31 13:31:11 by ihancer          ###   ########.fr       */
+/*   Updated: 2026/01/31 15:53:12 by ilknurhance      ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -39,7 +39,6 @@ private:
     std::map<int, Client*>      _clients;
     std::map<std::string, Channel*> _channels;
 
-    void    setupServerSocket();
     void    acceptNewClient();
     void    handleClientData(int fd);
     void    processCommand(int fd, std::string message);
