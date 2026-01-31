@@ -413,6 +413,82 @@ void Server::handlePrivmsg(int fd, const std::string& rawParams)
     sendNumeric(toFd, msg);
 }
 
+void Server::handleNotice(int fd, const std::string& rawParams)
+{
+    Client* c = _clients[fd];
+    if (!c)
+        return;
+
+    std::string params = trimSpaces(rawParams);
+    if (params.empty())
+    {
+        return;
+    }
+
+    // NOTICE <target> :<text>
+    size_t sp = params.find(' ');
+    if (sp == std::string::npos)
+    {
+        return;
+    }
+
+    std::string target = trimSpaces(params.substr(0, sp));
+    std::string rest   = trimSpaces(params.substr(sp + 1));
+
+    if (target.empty())
+    {
+        return;
+    }
+
+    std::string text;
+    if (!rest.empty() && rest[0] == ':')
+        text = rest.substr(1);
+    else
+    {
+        size_t colonPos = rest.find(" :");
+        if (colonPos != std::string::npos)
+            text = rest.substr(colonPos + 2);
+        else
+            text = rest;
+    }
+
+    text = trimSpaces(text);
+    if (text.empty())
+    {
+        return;
+    }
+
+    std::string msg = makePrefix(c) + " NOTICE " + target + " :" + text + "\r\n";
+
+    if (!target.empty() && target[0] == '#')
+    {
+        std::map<std::string, Channel*>::iterator it = _channels.find(target);
+        if (it == _channels.end())
+        {
+            return;
+        }
+
+        Channel* ch = it->second;
+
+        if (!ch->hasUser(fd))
+        {
+            return;
+        }
+
+        ch->broadcast(msg, fd);
+        return;
+    }
+
+    int toFd = findFdByNick(target);
+
+    if (toFd == -1)
+    {
+        return;
+    }
+
+    sendNumeric(toFd, msg);
+}
+
 void Server::handleNames(int fd, const std::string& rawParams)
 {
     Client* c = _clients[fd];

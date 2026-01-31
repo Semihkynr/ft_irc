@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Server.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: ilknurhancer <ilknurhancer@student.42.f    +#+  +:+       +#+        */
+/*   By: teraslan <teraslan@student.42istanbul.c    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/24 18:38:15 by skaynar           #+#    #+#             */
-/*   Updated: 2026/01/30 13:23:10 by ilknurhance      ###   ########.fr       */
+/*   Updated: 2026/01/31 12:12:10 by teraslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -280,6 +280,7 @@ void Server::processCommand(int fd, std::string message)
     else if (command == "USER")    handleUser(fd, params);
     else if (command == "JOIN")    handleJoin(fd, params);
     else if (command == "PRIVMSG") handlePrivmsg(fd, params);
+    else if (command == "NOTICE")  handleNotice(fd, params);
     else if (command == "NAMES")   handleNames(fd, params);
     else if (command == "LIST")    handleList(fd, params);
     else if (command == "PART")    handlePart(fd, params);

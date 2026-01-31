@@ -6,7 +6,7 @@
 /*   By: teraslan <teraslan@student.42istanbul.c    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/24 18:38:07 by skaynar           #+#    #+#             */
-/*   Updated: 2026/01/13 16:39:24 by teraslan         ###   ########.fr       */
+/*   Updated: 2026/01/31 12:12:11 by teraslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -49,6 +49,7 @@ private:
     void handleUser(int fd, const std::string& params);
     void handleJoin(int fd, const std::string& params);
     void handlePrivmsg(int fd, const std::string& params);
+    void handleNotice(int fd, const std::string& params);
     void handleNames(int fd, const std::string& params);
     void handlePart(int fd, const std::string& params);
     void handleQuit(int fd, const std::string& params);
