@@ -6,7 +6,7 @@
 /*   By: teraslan <teraslan@student.42istanbul.c    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/24 18:38:15 by skaynar           #+#    #+#             */
-/*   Updated: 2026/01/31 12:12:10 by teraslan         ###   ########.fr       */
+/*   Updated: 2026/01/31 13:18:31 by teraslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -255,12 +255,17 @@ void Server::processCommand(int fd, std::string message)
         return;
     }
 
-    if (!_clients[fd]->isAuthenticated())
+    // NICK, USER, QUIT, PING komutları PASS olmadan da çalışabilir
+    // Diğer komutlar için authentication şart
+    if (command != "NICK" && command != "USER" && command != "QUIT" && command != "PING")
     {
-        std::cout << "FD " << fd << " - BLOCKED: Not authenticated (tried: " << message << ")" << std::endl;
-        std::string error = "ERROR :You must authenticate with PASS first\r\n";
-        send(fd, error.c_str(), error.length(), 0);
-        return;
+        if (!_clients[fd]->isAuthenticated())
+        {
+            std::cout << "FD " << fd << " - BLOCKED: Not authenticated (tried: " << message << ")" << std::endl;
+            std::string error = "ERROR :You must authenticate with PASS first\r\n";
+            send(fd, error.c_str(), error.length(), 0);
+            return;
+        }
     }
 
     if (command != "NICK" && command != "USER" && command != "QUIT" && command != "PING")
