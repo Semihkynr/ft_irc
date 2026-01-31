@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   main.cpp                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: ilknurhancer <ilknurhancer@student.42.f    +#+  +:+       +#+        */
+/*   By: ihancer <ihancer@student.42istanbul.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/24 18:41:43 by skaynar           #+#    #+#             */
-/*   Updated: 2026/01/11 19:25:04 by ilknurhance      ###   ########.fr       */
+/*   Updated: 2026/01/31 13:28:51 by ihancer          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 

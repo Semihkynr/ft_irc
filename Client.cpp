@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Client.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: teraslan <teraslan@student.42istanbul.c    +#+  +:+       +#+        */
+/*   By: ihancer <ihancer@student.42istanbul.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/24 18:42:43 by skaynar           #+#    #+#             */
-/*   Updated: 2026/01/13 15:04:49 by teraslan         ###   ########.fr       */
+/*   Updated: 2026/01/31 13:28:09 by ihancer          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -27,7 +27,6 @@ int Client::getFd() const {
     return _fd;
 }
 
-// Input buffer
 void Client::addBuffer(const std::string& str) {
     _buffer += str;
 }
@@ -40,7 +39,6 @@ void Client::clearBuffer() {
     _buffer.clear();
 }
 
-// Auth / register flags
 bool Client::isAuthenticated() const {
     return _authenticated;
 }
@@ -57,7 +55,6 @@ void Client::setRegistered(bool reg) {
     _registered = reg;
 }
 
-// Nickname
 void Client::setNickname(const std::string& nick) {
     _nickname = nick;
 }
@@ -70,7 +67,6 @@ bool Client::hasNickname() const {
     return !_nickname.empty();
 }
 
-// Username
 void Client::setUsername(const std::string& user) {
     _username = user;
 }

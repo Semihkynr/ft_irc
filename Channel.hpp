@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Channel.hpp                                        :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: teraslan <teraslan@student.42istanbul.c    +#+  +:+       +#+        */
+/*   By: ihancer <ihancer@student.42istanbul.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/03 14:12:31 by teraslan          #+#    #+#             */
-/*   Updated: 2026/01/31 13:16:47 by teraslan         ###   ########.fr       */
+/*   Updated: 2026/01/31 13:27:55 by ihancer          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -97,7 +97,6 @@ class Channel {
         bool getTopicOperatorOnlyMode() const;
         bool getKeyMode() const;
         bool getLimitMode() const;
-
 
 };
 

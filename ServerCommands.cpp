@@ -1,3 +1,15 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   ServerCommands.cpp                                 :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: ihancer <ihancer@student.42istanbul.com    +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2026/01/31 13:44:38 by ihancer           #+#    #+#             */
+/*   Updated: 2026/01/31 13:44:41 by ihancer          ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
 #include "Server.hpp"
 
 void Server::handlePass(int fd, const std::string& rawParams)
@@ -61,8 +73,6 @@ void Server::handleNick(int fd, const std::string& rawParams)
         return;
     }
 
-    // Check nickname format (RFC 2812)
-    // Nick must be 1-9 chars, first char must be letter
     if (nick.length() < 1 || nick.length() > 9)
     {
         std::string err = ":server 432 * " + nick + " :Erroneous nickname\r\n";
@@ -70,7 +80,6 @@ void Server::handleNick(int fd, const std::string& rawParams)
         return;
     }
     
-    // First character must be a letter (RFC 2812)
     if (!((nick[0] >= 'a' && nick[0] <= 'z') || (nick[0] >= 'A' && nick[0] <= 'Z')))
     {
         std::string err = ":server 432 * " + nick + " :Erroneous nickname\r\n";
@@ -78,7 +87,6 @@ void Server::handleNick(int fd, const std::string& rawParams)
         return;
     }
     
-    // Check for invalid characters (can be letter, digit, or special: - [ ] \ ` ^ { | })
     for (size_t i = 0; i < nick.length(); ++i)
     {
         char c = nick[i];
@@ -100,13 +108,12 @@ void Server::handleNick(int fd, const std::string& rawParams)
     }
 
     std::string oldNick = c->hasNickname() ? c->getNickname() : c->getUsername();
-    std::string oldPrefix = makePrefix(c);  // Full prefix with user@host
+    std::string oldPrefix = makePrefix(c);
     c->setNickname(nick);
 
     std::string reply = oldPrefix + " NICK :" + nick + "\r\n";
     sendNumeric(fd, reply);
 
-    // Other clients in same channel should also get this
     for (std::map<std::string, Channel*>::iterator it = _channels.begin(); it != _channels.end(); ++it) {
         if (it->second && it->second->hasUser(fd)) {
             it->second->broadcast(reply, fd);
@@ -125,7 +132,6 @@ void Server::handleUser(int fd, const std::string& rawParams)
     if (!c)
         return;
 
-    // IRC: USER <username> <mode> <unused> :<realname>
     std::string params = trimSpaces(rawParams);
     if (params.empty())
     {
@@ -162,7 +168,6 @@ void Server::handleJoin(int fd, const std::string& rawParams)
         return;
     }
 
-    // JOIN 0: tüm kanallardan ayrıl (RFC 2812)
     if (params == "0")
     {
         std::vector<std::string> userChans;
@@ -206,7 +211,6 @@ void Server::handleJoin(int fd, const std::string& rawParams)
         keyList  = trimSpaces(params.substr(sp + 1));
     }
     
-    // önce channels
     std::vector<std::string> chans;
     size_t start = 0;
     while (start < chanList.size())
@@ -220,7 +224,6 @@ void Server::handleJoin(int fd, const std::string& rawParams)
         start = comma + 1;
     }
 
-    // sonra keys
     std::vector<std::string> keys;
     if (!keyList.empty())
     {
@@ -247,14 +250,12 @@ void Server::handleJoin(int fd, const std::string& rawParams)
             continue;
         }
 
-        // Channel name length check (max 50)
         if (chan.length() > 50)
         {
             sendNumeric(fd, ":server 403 " + c->getNickname() + " " + chan + " :Channel name too long\r\n");
             continue;
         }
 
-        // Check for spaces, commas, ctrl characters
         bool invalid = false;
         for (size_t j = 1; j < chan.length(); ++j)
         {
@@ -272,7 +273,6 @@ void Server::handleJoin(int fd, const std::string& rawParams)
             continue;
         }
     
-        // Channel var mı? yoksa oluştur
         if (_channels.find(chan) == _channels.end())
         {
             _channels[chan] = new Channel(chan, key, 100);
@@ -280,15 +280,11 @@ void Server::handleJoin(int fd, const std::string& rawParams)
 
         Channel* ch = _channels[chan];
 
-        // Zaten içeride mi?
         if (ch->hasUser(fd))
             continue;
 
-        // Join kuralları
         if (!ch->canJoin(fd, key))
         {
-            // En basit hata ayrımı:
-            // doluysa 471, invite-only ise 473, key hatası 475
             if (ch->isFull())
                 sendNumeric(fd, ":server 471 " + c->getNickname() + " " + chan + " :Cannot join channel (+l)\r\n");
             else if (ch->getIsPrivate())
@@ -297,16 +293,12 @@ void Server::handleJoin(int fd, const std::string& rawParams)
                 sendNumeric(fd, ":server 475 " + c->getNickname() + " " + chan + " :Cannot join channel (+k)\r\n");
             continue;
         }
-
-        // Ekle
         ch->addUser(fd, c);
 
-        // JOIN mesajı: önce join eden kişiye de gitsin
         std::string joinMsg = makePrefix(c) + " JOIN :" + chan + "\r\n";
         sendNumeric(fd, joinMsg);
-        ch->broadcast(joinMsg, fd); // diğerlerine (sender hariç)
+        ch->broadcast(joinMsg, fd);
 
-        // TOPIC (331/332)
         if (ch->getTopicSet())
             sendNumeric(fd, ":server 332 " + c->getNickname() + " " + chan + " :" + ch->getTopic() + "\r\n");
         else
@@ -318,7 +310,7 @@ void Server::handleJoin(int fd, const std::string& rawParams)
             if (it->second && it->second->hasNickname()) {
                 if (!names.empty())
                     names += " ";
-                if (ch->isOperator(it->first))  // ✅ Operator check ekle
+                if (ch->isOperator(it->first))
                     names += "@";
                 names += it->second->getNickname();
             }
@@ -342,7 +334,6 @@ void Server::handlePrivmsg(int fd, const std::string& rawParams)
         return;
     }
 
-    // PRIVMSG <target> :<text>
     size_t sp = params.find(' ');
     if (sp == std::string::npos)
     {
@@ -364,7 +355,6 @@ void Server::handlePrivmsg(int fd, const std::string& rawParams)
         text = rest.substr(1);
     else
     {
-        // “ :” yoksa da fallback
         size_t colonPos = rest.find(" :");
         if (colonPos != std::string::npos)
             text = rest.substr(colonPos + 2);
@@ -398,7 +388,7 @@ void Server::handlePrivmsg(int fd, const std::string& rawParams)
             return;
         }
 
-        ch->broadcast(msg, fd); // sender hariç herkese
+        ch->broadcast(msg, fd);
         return;
     }
 
@@ -425,7 +415,6 @@ void Server::handleNotice(int fd, const std::string& rawParams)
         return;
     }
 
-    // NOTICE <target> :<text>
     size_t sp = params.find(' ');
     if (sp == std::string::npos)
     {
@@ -563,7 +552,6 @@ void Server::handleList(int fd, const std::string& rawParams)
 
     std::string params = trimSpaces(rawParams);
 
-    // RPL_LISTSTART
     sendNumeric(fd, ":server 321 " + c->getNickname() + " Channel :Users Name\r\n");
 
     std::vector<std::string> targets;
@@ -599,8 +587,6 @@ void Server::handleList(int fd, const std::string& rawParams)
         std::string topic = ch->getTopic();
         sendNumeric(fd, ":server 322 " + c->getNickname() + " " + chanName + " " + intToString(ch->getUserCount()) + " :" + topic + "\r\n");
     }
-
-    // RPL_LISTEND
     sendNumeric(fd, ":server 323 " + c->getNickname() + " :End of /LIST\r\n");
 }
 
@@ -617,7 +603,6 @@ void Server::handlePart(int fd, const std::string& rawParams)
         return;
     }
 
-    // PART <channel>{,<channel>} [:<reason>]
     std::string chanList;
     std::string reason;
 
@@ -635,7 +620,6 @@ void Server::handlePart(int fd, const std::string& rawParams)
     if (reason.empty())
         reason = "Leaving";
 
-    // Parse channel list (comma-separated)
     std::vector<std::string> chans;
     size_t start = 0;
     while (start < chanList.size())
@@ -654,7 +638,6 @@ void Server::handlePart(int fd, const std::string& rawParams)
     {
         std::string chan = chans[i];
 
-        // Check if channel exists
         std::map<std::string, Channel*>::iterator it = _channels.find(chan);
         if (it == _channels.end())
         {
@@ -664,31 +647,25 @@ void Server::handlePart(int fd, const std::string& rawParams)
 
         Channel* ch = it->second;
 
-        // Check if user is in channel
         if (!ch->hasUser(fd))
         {
             sendNumeric(fd, ":server 442 " + c->getNickname() + " " + chan + " :You're not on that channel\r\n");
             continue;
         }
 
-        // Send PART message to all users in channel (including sender)
         std::string partMsg = makePrefix(c) + " PART " + chan + " :" + reason + "\r\n";
         sendNumeric(fd, partMsg);
         ch->broadcast(partMsg, fd);
 
-        // Check if the leaving user is an operator
         bool wasOperator = ch->isOperator(fd);
 
-        // Remove user from channel
         ch->removeUser(fd);
 
-        // If an operator left and there are still users in the channel, promote a new operator
         if (wasOperator && !ch->isEmpty())
         {
             ch->promoteNewOperator();
         }
 
-        // Delete channel if empty
         if (ch->isEmpty())
         {
             delete ch;
@@ -727,9 +704,6 @@ void Server::handleQuit(int fd, const std::string& rawParams)
     }
 }
 
-
-//CHANNEL COMMAND
-
 void Server::handleTopic(int fd, const std::string& rawParams)
 {
     Client* c = _clients[fd];
@@ -742,7 +716,6 @@ void Server::handleTopic(int fd, const std::string& rawParams)
         return;
     }
 
-    // TOPIC #chan [:new topic]
     size_t sp = params.find(' ');
     std::string chan = (sp == std::string::npos) ? params : trimSpaces(params.substr(0, sp));
     std::string rest = (sp == std::string::npos) ? ""     : trimSpaces(params.substr(sp + 1));
@@ -761,7 +734,6 @@ void Server::handleTopic(int fd, const std::string& rawParams)
         return;
     }
 
-    // Sadece görüntüleme
     if (rest.empty())
     {
         if (ch->getTopicSet())
@@ -771,7 +743,6 @@ void Server::handleTopic(int fd, const std::string& rawParams)
         return;
     }
 
-    // Set etme (rest genelde ":topic")
     if (!rest.empty() && rest[0] == ':') rest = rest.substr(1);
 
     if (!ch->changeTopic(fd, rest))
@@ -842,7 +813,7 @@ void Server::handleKick(int fd, const std::string& rawParams)
     if (!c) return;
 
     std::string params = trimSpaces(rawParams);
-    // KICK #chan nick [:reason]
+
     size_t sp1 = params.find(' ');
     if (sp1 == std::string::npos)
     {
@@ -880,14 +851,12 @@ void Server::handleKick(int fd, const std::string& rawParams)
         return;
     }
 
-    // Check if target user is in the channel
     if (!ch->hasUser(targetFd))
     {
         sendNumeric(fd, ":server 441 " + c->getNickname() + " " + nick + " " + chan + " :They aren't on that channel\r\n");
         return;
     }
 
-    // Check if kicker is an operator
     if (!ch->canKick(fd))
     {
         sendNumeric(fd, ":server 482 " + c->getNickname() + " " + chan + " :You're not channel operator\r\n");
@@ -898,12 +867,10 @@ void Server::handleKick(int fd, const std::string& rawParams)
 
     std::string msg = makePrefix(c) + " KICK " + chan + " " + nick + " :" + reason + "\r\n";
 
-    // Mesajı gönder
     sendNumeric(fd, msg);
     sendNumeric(targetFd, msg);
-    ch->broadcast(msg, fd);  // ← -1 = herkese (sender dahil değil zaten broadcast'ta)
+    ch->broadcast(msg, fd);
 
-    // Kanal boşsa sil
     if (ch->isEmpty()) {
         delete ch;
         _channels.erase(it);
@@ -922,7 +889,6 @@ void Server::handleMode(int fd, const std::string& rawParams)
         return;
     }
 
-    // MODE #chan [modes] [modeparams...]
     size_t sp = params.find(' ');
     std::string chan = (sp == std::string::npos) ? params : trimSpaces(params.substr(0, sp));
     std::string rest = (sp == std::string::npos) ? ""     : trimSpaces(params.substr(sp + 1));
@@ -941,7 +907,6 @@ void Server::handleMode(int fd, const std::string& rawParams)
         return;
     }
 
-    // sadece MODE #chan -> mevcut mode string dön
     if (rest.empty())
     {
         std::string modes = ch->getModeString();
@@ -949,12 +914,10 @@ void Server::handleMode(int fd, const std::string& rawParams)
         return;
     }
 
-    // rest: "<modes> <params...>"
     size_t sp2 = rest.find(' ');
     std::string modeStr = (sp2 == std::string::npos) ? rest : trimSpaces(rest.substr(0, sp2));
     std::string paramStr = (sp2 == std::string::npos) ? "" : trimSpaces(rest.substr(sp2 + 1));
 
-    // paramStr’yi tokenlara böl
     std::vector<std::string> rawModeParams;
     while (!paramStr.empty())
     {
@@ -976,8 +939,8 @@ void Server::handleMode(int fd, const std::string& rawParams)
 
         bool needsParam = false;
         if (m == 'o') needsParam = true;
-        else if (m == 'k') needsParam = (sign == '+'); // +k ister, -k istemez
-        else if (m == 'l') needsParam = (sign == '+'); // +l ister, -l istemez
+        else if (m == 'k') needsParam = (sign == '+');
+        else if (m == 'l') needsParam = (sign == '+');
 
         if (needsParam)
         {
@@ -1031,7 +994,6 @@ void Server::handleMode(int fd, const std::string& rawParams)
         return;
     }
 
-    // MODE değişikliğini kanala duyur
     std::string msg = makePrefix(c) + " MODE " + chan + " " + modeStr;
     for (size_t i = 0; i < rawModeParams.size(); ++i)
         msg += " " + rawModeParams[i];
@@ -1053,14 +1015,12 @@ void Server::handleWho(int fd, const std::string& rawParams)
         return;
     }
 
-    // WHO can be for a channel or a nickname
     std::string target = params;
     size_t sp = target.find(' ');
     if (sp != std::string::npos)
         target = target.substr(0, sp);
     target = trimSpaces(target);
 
-    // Check if target is a channel
     if (!target.empty() && target[0] == '#')
     {
         std::map<std::string, Channel*>::iterator it = _channels.find(target);
@@ -1078,23 +1038,19 @@ void Server::handleWho(int fd, const std::string& rawParams)
             Client* u = uit->second;
             if (!u || !u->hasNickname()) continue;
 
-            std::string flags = "H"; // H = here, G = gone (away)
+            std::string flags = "H";
             if (ch->isOperator(uit->first))
                 flags += "@";
 
-            // RPL_WHOREPLY (352): <channel> <user> <host> <server> <nick> <flags> :<hopcount> <realname>
             std::string reply = ":server 352 " + c->getNickname() + " " + target + " " +
                               u->getUsername() + " localhost server " + u->getNickname() + " " +
                               flags + " :0 " + u->getUsername() + "\r\n";
             sendNumeric(fd, reply);
         }
-
-        // RPL_ENDOFWHO (315)
         sendNumeric(fd, ":server 315 " + c->getNickname() + " " + target + " :End of WHO list\r\n");
     }
     else
     {
-        // WHO for a specific nickname
         int targetFd = findFdByNick(target);
         if (targetFd == -1)
         {
@@ -1105,9 +1061,7 @@ void Server::handleWho(int fd, const std::string& rawParams)
         Client* targetClient = _clients[targetFd];
         if (targetClient && targetClient->hasNickname())
         {
-            std::string flags = "H"; // Here
-
-            // Find what channels the user is in
+            std::string flags = "H";
             std::string chanName = "*";
             for (std::map<std::string, Channel*>::iterator it = _channels.begin(); it != _channels.end(); ++it)
             {
@@ -1143,7 +1097,6 @@ void Server::handleWhois(int fd, const std::string& rawParams)
         return;
     }
 
-    // Parse nickname (could be comma-separated but we'll handle single for now)
     std::string targetNick = params;
     size_t sp = targetNick.find(' ');
     if (sp != std::string::npos)
@@ -1153,7 +1106,6 @@ void Server::handleWhois(int fd, const std::string& rawParams)
     int targetFd = findFdByNick(targetNick);
     if (targetFd == -1)
     {
-        // ERR_NOSUCHNICK (401)
         sendNumeric(fd, ":server 401 " + c->getNickname() + " " + targetNick + " :No such nick\r\n");
         sendNumeric(fd, ":server 318 " + c->getNickname() + " " + targetNick + " :End of WHOIS list\r\n");
         return;
@@ -1167,17 +1119,14 @@ void Server::handleWhois(int fd, const std::string& rawParams)
         return;
     }
 
-    // RPL_WHOISUSER (311): <nick> <user> <host> * :<real name>
     std::string whoisUser = ":server 311 " + c->getNickname() + " " + targetClient->getNickname() + " " +
                            targetClient->getUsername() + " localhost * :" + targetClient->getUsername() + "\r\n";
     sendNumeric(fd, whoisUser);
 
-    // RPL_WHOISSERVER (312): <nick> <server> :<server info>
     std::string whoisServer = ":server 312 " + c->getNickname() + " " + targetClient->getNickname() + 
                              " server :IRC Server\r\n";
     sendNumeric(fd, whoisServer);
 
-    // RPL_WHOISCHANNELS (319): <nick> :{[@|+]<channel> }
     std::string channels;
     for (std::map<std::string, Channel*>::iterator it = _channels.begin(); it != _channels.end(); ++it)
     {
@@ -1197,8 +1146,6 @@ void Server::handleWhois(int fd, const std::string& rawParams)
                                    " :" + channels + "\r\n";
         sendNumeric(fd, whoisChannels);
     }
-
-    // RPL_ENDOFWHOIS (318)
     sendNumeric(fd, ":server 318 " + c->getNickname() + " " + targetClient->getNickname() + " :End of WHOIS list\r\n");
 }
 

@@ -1,3 +1,15 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   ServerHelpers.cpp                                  :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: ihancer <ihancer@student.42istanbul.com    +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2026/01/31 13:44:50 by ihancer           #+#    #+#             */
+/*   Updated: 2026/01/31 13:44:53 by ihancer          ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
 #include "Server.hpp"
 
 bool Server::isNickInUse(const std::string& nick, int requesterFd) const
@@ -8,7 +20,6 @@ bool Server::isNickInUse(const std::string& nick, int requesterFd) const
         int fd = it->first;
         Client* c = it->second;
 
-        //irc nicknames are case-insensitive
         if (fd != requesterFd && c && c->hasNickname() && toUpper(c->getNickname()) == toUpper(nick))
             return true;
 
@@ -50,7 +61,6 @@ void Server::sendWelcome(int fd)
     const std::string& nick = c->getNickname();
     const std::string& user = c->getUsername();
 
-    // Minimal host bilgisi (ileride gerçek host/addr eklenebilir)
     std::string host = "localhost";
 
     std::string m1 = ":server 001 " + nick + " :Welcome to the IRC Network " +
@@ -60,7 +70,6 @@ void Server::sendWelcome(int fd)
     std::string m3 = ":server 003 " + nick + " :This server was created today\r\n";
     std::string m4 = ":server 004 " + nick + " server 0.1 oiws obtkmlvsn\r\n";
 
-    // 🔥 KVIrc İÇİN KRİTİK SATIR
     std::string m5 = ":server 005 " + nick +
         " CHANMODES=b,k,l,imnst PREFIX=(ov)@+ NETWORK=LocalNet :are supported\r\n";
 
@@ -108,8 +117,7 @@ void Server::sendNumeric(int fd, const std::string& msg)
 
 int Server::findFdByNick(const std::string& nick) const
 {
-    //irc nicknames are case-insensitive
-    std::string lowerNick = toUpper(nick);  // or toLower
+    std::string lowerNick = toUpper(nick);
     for (std::map<int, Client*>::const_iterator it = _clients.begin(); it != _clients.end(); ++it) {
         if (it->second && it->second->hasNickname() && 
             toUpper(it->second->getNickname()) == lowerNick)
@@ -133,23 +141,18 @@ void Server::removeClientFromAllChannels(int fd, const std::string& quitMsg)
 
         if (ch && ch->hasUser(fd))
         {
-            // Kanaldakilere QUIT mesajını duyur (sender hariç)
             if (!quitMsg.empty())
                 ch->broadcast(quitMsg, fd);
 
-            // Check if the leaving user is an operator
             bool wasOperator = ch->isOperator(fd);
 
-            // User'ı kanaldan çıkar
             ch->removeUser(fd);
 
-            // If an operator left and there are still users in the channel, promote a new operator
             if (wasOperator && !ch->isEmpty())
             {
                 ch->promoteNewOperator();
             }
 
-            // Kanal boşsa sil (policy)
             if (ch->isEmpty())
             {
                 delete ch;

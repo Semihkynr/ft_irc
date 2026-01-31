@@ -3,16 +3,16 @@
 /*                                                        :::      ::::::::   */
 /*   Server.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: teraslan <teraslan@student.42istanbul.c    +#+  +:+       +#+        */
+/*   By: ihancer <ihancer@student.42istanbul.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/24 18:38:15 by skaynar           #+#    #+#             */
-/*   Updated: 2026/01/31 13:18:31 by teraslan         ###   ########.fr       */
+/*   Updated: 2026/01/31 13:30:34 by ihancer          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "Server.hpp"
-#include <cstring>   // std::memset
-#include <stdexcept> // std::runtime_error
+#include <cstring> 
+#include <stdexcept>
 
 Server::Server(int port, std::string password)
     : _port(port), _serverFd(-1), _password(password) {}
@@ -83,8 +83,8 @@ void Server::run()
         if (ret < 0)
         {
             if (errno == EINTR)
-                continue; // signal ile bölündüyse devam
-            break;       // gerçek hata
+                continue;
+            break;
         }
 
     for (size_t i = 0; i < _pollFds.size(); ++i)
@@ -98,7 +98,6 @@ void Server::run()
             acceptNewClient();
         else
             handleClientData(curFd);
-        // _pollFds değişmiş olabilir (disconnect/accept). Güvenli olmak için çık.
         break;
     }
 
@@ -112,14 +111,11 @@ void Server::acceptNewClient()
         int clientFd = accept(_serverFd, NULL, NULL);
         if (clientFd == -1)
         {
-            // Non-blocking accept: kuyruk boşsa EAGAIN/EWOULDBLOCK gelir, normal
             if (errno == EAGAIN || errno == EWOULDBLOCK)
                 break;
-            // Diğer hatalar loglanabilir, ama loop'u kırmak yeterli
             break;
         }
 
-        // Yeni client fd non-blocking
         try {
             setNonBlockingOrThrow(clientFd);
         } catch (...) {
@@ -147,16 +143,14 @@ void Server::handleClientData(int fd)
 
         if (bytes == 0)
         {
-            // Client bağlantıyı kapattı (EOF)
             Client* c = (_clients.find(fd) != _clients.end()) ? _clients[fd] : NULL;
             std::string quitMsg;
             if (c)
                 quitMsg = makePrefix(c) + " QUIT :Connection closed\r\n";
 
-            // NEW: önce kanallardan çıkar + kanal boşsa sil
             removeClientFromAllChannels(fd, quitMsg);
-
             close(fd);
+
             if (_clients.find(fd) != _clients.end())
             {
                 delete _clients[fd];
@@ -171,17 +165,14 @@ void Server::handleClientData(int fd)
         }
         else if (bytes < 0)
         {
-            // Non-blocking recv: veri yoksa EAGAIN/EWOULDBLOCK normal
             if (errno == EAGAIN || errno == EWOULDBLOCK)
                 break;
 
-            // Gerçek hata -> disconnect
             Client* c = (_clients.find(fd) != _clients.end()) ? _clients[fd] : NULL;
             std::string quitMsg;
             if (c)
                 quitMsg = makePrefix(c) + " QUIT :Read error\r\n";
 
-            // NEW: önce kanallardan çıkar + kanal boşsa sil
             removeClientFromAllChannels(fd, quitMsg);
 
             close(fd);
@@ -198,10 +189,8 @@ void Server::handleClientData(int fd)
             return;
         }
 
-        // bytes > 0
         buf[bytes] = '\0';
 
-        // fd map'te yoksa güvenli çık (normalde olmamalı ama crash önler)
         if (_clients.find(fd) == _clients.end() || !_clients[fd])
             return;
 
@@ -224,14 +213,11 @@ void Server::handleClientData(int fd)
     }
 }
 
-
-//PROCESS COMMAND
 void Server::processCommand(int fd, std::string message)
 {
     if (message.empty())
         return;
 
-    // Check map first
     if (_clients.find(fd) == _clients.end() || !_clients[fd])
         return;
 
@@ -255,8 +241,6 @@ void Server::processCommand(int fd, std::string message)
         return;
     }
 
-    // NICK, USER, QUIT, PING komutları PASS olmadan da çalışabilir
-    // Diğer komutlar için authentication şart
     if (command != "NICK" && command != "USER" && command != "QUIT" && command != "PING")
     {
         if (!_clients[fd]->isAuthenticated())
@@ -303,4 +287,3 @@ void Server::processCommand(int fd, std::string message)
         send(fd, error.c_str(), error.length(), 0);
     }
 }
-

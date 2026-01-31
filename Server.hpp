@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Server.hpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: teraslan <teraslan@student.42istanbul.c    +#+  +:+       +#+        */
+/*   By: ihancer <ihancer@student.42istanbul.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/24 18:38:07 by skaynar           #+#    #+#             */
-/*   Updated: 2026/01/31 12:12:11 by teraslan         ###   ########.fr       */
+/*   Updated: 2026/01/31 13:31:11 by ihancer          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -36,14 +36,14 @@ private:
     int                         _serverFd;
     std::string                 _password;
     std::vector<struct pollfd>  _pollFds;
-    std::map<int, Client*>      _clients; // FD'ye göre Client nesnesine hızlı erişim
-    std::map<std::string, Channel*> _channels; //elimizdeki channel listesine erişmek içim
+    std::map<int, Client*>      _clients;
+    std::map<std::string, Channel*> _channels;
 
     void    setupServerSocket();
     void    acceptNewClient();
     void    handleClientData(int fd);
     void    processCommand(int fd, std::string message);
-    
+
     void handlePass(int fd, const std::string& params);
     void handleNick(int fd, const std::string& params);
     void handleUser(int fd, const std::string& params);
@@ -55,7 +55,7 @@ private:
     void handleQuit(int fd, const std::string& params);
 
     void handleMode(int fd, const std::string& params);
-        void handleList(int fd, const std::string& params);
+    void handleList(int fd, const std::string& params);
     void handleKick(int fd, const std::string& params);
     void handleInvite(int fd, const std::string& params);
     void handleTopic(int fd, const std::string& params);
@@ -63,7 +63,6 @@ private:
     void handleWhois(int fd, const std::string& params);
     void handlePing(int fd, const std::string& params);
 
-    // Helpers
     bool isNickInUse(const std::string& nick, int requesterFd) const;
     static std::string trimSpaces(const std::string& s);
     static std::string toUpper(const std::string& s);
@@ -72,12 +71,7 @@ private:
     std::string makePrefix(Client* c) const;
     void        sendNumeric(int fd, const std::string& msg);
     int findFdByNick(const std::string& nick) const;
-    
     void removeClientFromAllChannels(int fd, const std::string& quitMsg);
-
-
-
-
 
 public:
     Server(int port, std::string password);
@@ -87,7 +81,6 @@ public:
     void    run();
 };
 
-// Helper function
 std::string intToString(int v);
 
 #endif
