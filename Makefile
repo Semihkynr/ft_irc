@@ -3,8 +3,8 @@ CXX         = c++
 CXXFLAGS    = -std=c++98 -Wall -Wextra -Werror
 
 SRCS = main.cpp \
-       Server.cpp ServerHelpers.cpp ServerCommands.cpp \
-       Client.cpp Channel.cpp
+       Server.cpp ServerHelpers.cpp AuthCommands.cpp ChannelCommands.cpp\
+       MessagingCommands.cpp Client.cpp Channel.cpp
 OBJS        = $(SRCS:.cpp=.o)
 
 all: $(NAME)
