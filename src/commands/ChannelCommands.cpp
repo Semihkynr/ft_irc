@@ -126,7 +126,10 @@ void Server::handleJoin(int fd, const std::string& rawParams)
         Channel* ch = _channels[chan];
 
         if (ch->hasUser(fd))
+        {
+            sendNumeric(fd, ":server 443 " + c->getNickname() + " " + chan + " :is already on channel\r\n");
             continue;
+        }
 
         if (!ch->canJoin(fd, key))
         {

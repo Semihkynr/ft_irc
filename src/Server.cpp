@@ -6,7 +6,7 @@
 /*   By: ihancer <ihancer@student.42istanbul.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/24 18:38:15 by skaynar           #+#    #+#             */
-/*   Updated: 2026/02/01 15:30:08 by ihancer          ###   ########.fr       */
+/*   Updated: 2026/02/01 16:23:57 by ihancer          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -213,92 +213,13 @@ void Server::handleClientData(int fd)
     }
 }
 
-// void Server::processCommand(int fd, std::string message)
-// {
-//     if (message.empty())
-//         return;
-
-//     if (_clients.find(fd) == _clients.end() || !_clients[fd])
-//         return;
-
-//     if (!message.empty() && message[message.size() - 1] == '\r')
-//         message.erase(message.size() - 1);
-
-//     message = trimSpaces(message);
-//     if (message.empty())
-//         return;
-
-//     size_t spacePos = message.find(' ');
-//     std::string command = (spacePos == std::string::npos) ? message : message.substr(0, spacePos);
-//     std::string params  = (spacePos == std::string::npos) ? ""      : message.substr(spacePos + 1);
-
-//     command = toUpper(command);
-//     params  = trimSpaces(params);
-
-//     if (command == "PASS")
-//     {
-//         handlePass(fd, params);
-//         return;
-//     }
-
-//     if (command != "NICK" && command != "USER" && command != "QUIT" && command != "PING")
-//     {
-//         if (!_clients[fd]->isAuthenticated() || !_clients[fd] -> isRegistered())
-//         {
-//             std::cout << "FD " << fd << " - BLOCKED: Not authenticated (tried: " << message << ")" << std::endl;
-//             std::string error = "ERROR :You must authenticate with PASS first\r\n";
-//             send(fd, error.c_str(), error.length(), 0);
-//             return;
-//         }
-//     }
-
-//     if (command != "NICK" && command != "USER" && command != "QUIT" && command != "PING")
-//     {
-//         if (!_clients[fd]->hasNickname() || !_clients[fd]->hasUsername())
-//         {
-//             std::cout << "FD " << fd << " - BLOCKED: Not registered (tried: " << message << ")" << std::endl;
-//             std::string err = ":server 451 * :You have not registered\r\n";
-//             send(fd, err.c_str(), err.length(), 0);
-//             return;
-//         }
-//     }
-
-//     std::cout << "FD " << fd << " [AUTHENTICATED] sent: " << message << std::endl;
-
-//     if      (command == "NICK")    handleNick(fd, params);
-//     else if (command == "USER")    handleUser(fd, params);
-//     else if (command == "JOIN")    handleJoin(fd, params);
-//     else if (command == "PRIVMSG") handlePrivmsg(fd, params);
-//     else if (command == "NOTICE")  handleNotice(fd, params);
-//     else if (command == "NAMES")   handleNames(fd, params);
-//     else if (command == "LIST")    handleList(fd, params);
-//     else if (command == "PART")    handlePart(fd, params);
-//     else if (command == "MODE")   handleMode(fd, params);
-//     else if (command == "KICK")   handleKick(fd, params);
-//     else if (command == "INVITE") handleInvite(fd, params);
-//     else if (command == "TOPIC")  handleTopic(fd, params);
-//     else if (command == "WHO")    handleWho(fd, params);
-//     else if (command == "WHOIS")  handleWhois(fd, params);
-//     else if (command == "PING")    handlePing(fd, params);
-//     else if (command == "QUIT")    handleQuit(fd, params);
-//     else
-//     {
-//         std::string error = "ERROR :Unknown command\r\n";
-//         send(fd, error.c_str(), error.length(), 0);
-//     }
-// }
-
-
 void Server::processCommand(int fd, std::string message)
 {
     if (message.empty())
         return;
 
-    std::map<int, Client*>::iterator cit = _clients.find(fd);
-    if (cit == _clients.end() || !cit->second)
+    if (_clients.find(fd) == _clients.end() || !_clients[fd])
         return;
-
-    Client* client = cit->second;
 
     if (!message.empty() && message[message.size() - 1] == '\r')
         message.erase(message.size() - 1);
@@ -314,57 +235,52 @@ void Server::processCommand(int fd, std::string message)
     command = toUpper(command);
     params  = trimSpaces(params);
 
-    // 1) PASS her zaman serbest
     if (command == "PASS")
     {
         handlePass(fd, params);
         return;
     }
 
-    // 2) QUIT ve PING her zaman serbest (auth/registration istemez)
-    if (command == "QUIT") { handleQuit(fd, params); return; }
-    if (command == "PING") { handlePing(fd, params); return; }
-
-    // 3) NICK/USER için PASS zorunlu olsun istiyorsanız:
-    if ((command == "NICK" || command == "USER") && !client->isAuthenticated())
+    if (command != "NICK" && command != "USER" && command != "QUIT" && command != "PING")
     {
-        std::string err = "ERROR :You must authenticate with PASS first\r\n";
-        send(fd, err.c_str(), err.length(), 0);
-        return;
+        if (!_clients[fd]->isAuthenticated() || !_clients[fd] -> isRegistered())
+        {
+            std::cout << "FD " << fd << " - BLOCKED: Not authenticated (tried: " << message << ")" << std::endl;
+            std::string error = "ERROR :You must authenticate with PASS first\r\n";
+            send(fd, error.c_str(), error.length(), 0);
+            return;
+        }
     }
 
-    // NICK/USER serbest (PASS sağlandıysa)
-    if (command == "NICK") { handleNick(fd, params); return; }
-    if (command == "USER") { handleUser(fd, params); return; }
-
-    // 4) Diğer tüm komutlar için: PASS + REGISTER zorunlu
-    if (!client->isAuthenticated())
+    if (command != "NICK" && command != "USER" && command != "QUIT" && command != "PING")
     {
-        std::string err = "ERROR :You must authenticate with PASS first\r\n";
-        send(fd, err.c_str(), err.length(), 0);
-        return;
+        if (!_clients[fd]->hasNickname() || !_clients[fd]->hasUsername())
+        {
+            std::cout << "FD " << fd << " - BLOCKED: Not registered (tried: " << message << ")" << std::endl;
+            std::string err = ":server 451 * :You have not registered\r\n";
+            send(fd, err.c_str(), err.length(), 0);
+            return;
+        }
     }
 
-    if (!client->isRegistered())
-    {
-        std::string err = ":server 451 * :You have not registered\r\n";
-        send(fd, err.c_str(), err.length(), 0);
-        return;
-    }
+    std::cout << "FD " << fd << " [AUTHENTICATED] sent: " << message << std::endl;
 
-    // 5) Artık komut dispatch
-    if      (command == "JOIN")    handleJoin(fd, params);
+    if      (command == "NICK")    handleNick(fd, params);
+    else if (command == "USER")    handleUser(fd, params);
+    else if (command == "JOIN")    handleJoin(fd, params);
     else if (command == "PRIVMSG") handlePrivmsg(fd, params);
     else if (command == "NOTICE")  handleNotice(fd, params);
     else if (command == "NAMES")   handleNames(fd, params);
     else if (command == "LIST")    handleList(fd, params);
     else if (command == "PART")    handlePart(fd, params);
-    else if (command == "MODE")    handleMode(fd, params);
-    else if (command == "KICK")    handleKick(fd, params);
-    else if (command == "INVITE")  handleInvite(fd, params);
-    else if (command == "TOPIC")   handleTopic(fd, params);
-    else if (command == "WHO")     handleWho(fd, params);
-    else if (command == "WHOIS")   handleWhois(fd, params);
+    else if (command == "MODE")   handleMode(fd, params);
+    else if (command == "KICK")   handleKick(fd, params);
+    else if (command == "INVITE") handleInvite(fd, params);
+    else if (command == "TOPIC")  handleTopic(fd, params);
+    else if (command == "WHO")    handleWho(fd, params);
+    else if (command == "WHOIS")  handleWhois(fd, params);
+    else if (command == "PING")    handlePing(fd, params);
+    else if (command == "QUIT")    handleQuit(fd, params);
     else
     {
         std::string error = "ERROR :Unknown command\r\n";
