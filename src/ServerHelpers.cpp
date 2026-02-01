@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   ServerHelpers.cpp                                  :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: ihancer <ihancer@student.42istanbul.com    +#+  +:+       +#+        */
+/*   By: teraslan <teraslan@student.42istanbul.c    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/31 13:44:50 by ihancer           #+#    #+#             */
-/*   Updated: 2026/01/31 13:44:53 by ihancer          ###   ########.fr       */
+/*   Updated: 2026/02/01 14:41:40 by teraslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -101,13 +101,11 @@ void Server::tryRegister(int fd)
         return;
     }
     
-    if (c->isRegistered())
-    {
-        c->setRegistered(false);
-        return;
-    }
-    c->setRegistered(true);
-    sendWelcome(fd);
+    if (!c->isRegistered())
+	{
+		c->setRegistered(true);
+		sendWelcome(fd);
+	}
 }
 
 std::string Server::makePrefix(Client* c) const
