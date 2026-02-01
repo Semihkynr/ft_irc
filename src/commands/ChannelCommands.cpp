@@ -6,17 +6,6 @@ void Server::handleJoin(int fd, const std::string& rawParams)
     if (!c)
         return;
 
-    if (!c->isAuthenticated())
-    {
-        sendNumeric(fd, "ERROR :You must authenticate with PASS first\r\n");
-        return;
-    }
-    if (!c->isRegistered() || !c->hasNickname() || !c->hasUsername())
-    {
-        sendNumeric(fd, ":server 451 * :You have not registered\r\n");
-        return;
-    }
-    
     std::string params = trimSpaces(rawParams);
     if (params.empty())
     {
