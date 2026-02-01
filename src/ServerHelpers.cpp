@@ -80,21 +80,32 @@ void Server::sendWelcome(int fd)
     send(fd, m5.c_str(), m5.length(), 0);
 }
 
+
 void Server::tryRegister(int fd)
 {
     Client* c = _clients[fd];
     if (!c)
+    {
+        c->setRegistered(false);
         return;
+    }
 
     if (!c->isAuthenticated())
+    {
+        c->setRegistered(false);
         return;
-
+    }
     if (!c->hasNickname() || !c->hasUsername())
+    {
+        c->setRegistered(false);
         return;
-
+    }
+    
     if (c->isRegistered())
+    {
+        c->setRegistered(false);
         return;
-
+    }
     c->setRegistered(true);
     sendWelcome(fd);
 }

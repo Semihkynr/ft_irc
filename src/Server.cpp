@@ -243,7 +243,7 @@ void Server::processCommand(int fd, std::string message)
 
     if (command != "NICK" && command != "USER" && command != "QUIT" && command != "PING")
     {
-        if (!_clients[fd]->isAuthenticated())
+        if (!_clients[fd]->isAuthenticated() || !_clients[fd] -> isRegistered())
         {
             std::cout << "FD " << fd << " - BLOCKED: Not authenticated (tried: " << message << ")" << std::endl;
             std::string error = "ERROR :You must authenticate with PASS first\r\n";
