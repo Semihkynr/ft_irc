@@ -10,7 +10,8 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "Server.hpp"
+#include "../include/Server.hpp"
+
 
 static bool isDigits(const char* s) {
     if (!s || !*s) return false;

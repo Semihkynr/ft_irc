@@ -127,7 +127,7 @@ void Server::handleJoin(int fd, const std::string& rawParams)
 
         if (ch->hasUser(fd))
         {
-            sendNumeric(fd, ":server 443 " + c->getNickname() + " " + chan + " :is already on channel\r\n");
+            sendNumeric(fd, ":server 443 " + c->getNickname() + " " + chan + " :channel\r\n");
             continue;
         }
 
@@ -649,8 +649,9 @@ void Server::handleMode(int fd, const std::string& rawParams)
     }
 
 
-    if (!ch->applyModeString(fd, modeStr, paramsForChannel))
+    if (!ch->applyModeString(fd, modeStr, paramsForChannel) && !ch->isOperator(fd))
     {
+
         sendNumeric(fd, ":server 482 " + c->getNickname() + " " + chan + " :You're not channel operator\r\n");
         return;
     }

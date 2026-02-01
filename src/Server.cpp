@@ -246,7 +246,7 @@ void Server::processCommand(int fd, std::string message)
         if (!_clients[fd]->isAuthenticated() || !_clients[fd] -> isRegistered())
         {
             std::cout << "FD " << fd << " - BLOCKED: Not authenticated (tried: " << message << ")" << std::endl;
-            std::string error = "ERROR :You must authenticate with PASS first\r\n";
+            std::string error = "ERROR :You must authenticate with PASS, USER, NICK first\r\n";
             send(fd, error.c_str(), error.length(), 0);
             return;
         }

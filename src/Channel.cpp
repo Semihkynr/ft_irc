@@ -10,7 +10,7 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "Channel.hpp"
+#include "../include/Channel.hpp"
 
 Channel::Channel(const std::string& name, const std::string& password, int maxUsers)
     : name(name),

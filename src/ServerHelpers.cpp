@@ -10,7 +10,8 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "Server.hpp"
+#include "../include/Server.hpp"
+
 
 bool Server::isNickInUse(const std::string& nick, int requesterFd) const
 {
@@ -90,22 +91,15 @@ void Server::tryRegister(int fd)
         return;
     }
 
-    if (!c->isAuthenticated())
-    {
+    if (!c->isAuthenticated() || !c->hasNickname() || !c->hasUsername()) {
         c->setRegistered(false);
         return;
     }
-    if (!c->hasNickname() || !c->hasUsername())
-    {
-        c->setRegistered(false);
-        return;
+
+    if (!c->isRegistered()) {
+        c->setRegistered(true);
+        sendWelcome(fd);   
     }
-    
-    if (!c->isRegistered())
-	{
-		c->setRegistered(true);
-		sendWelcome(fd);
-	}
 }
 
 std::string Server::makePrefix(Client* c) const

@@ -1,4 +1,5 @@
-#include "Server.hpp"
+#include "../../include/Server.hpp"
+
 
 void Server::handlePrivmsg(int fd, const std::string& rawParams)
 {
