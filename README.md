@@ -1,8 +1,12 @@
-# IRC Server (ft_irc)
+# ft_irc — Internet Relay Chat Server
 
-This project is a simplified implementation of an IRC (Internet Relay Chat) server written in **C++98**, developed according to the ft_irc subject requirements.
+## Overview
 
-The server supports multiple simultaneous clients using non-blocking sockets and the `poll()` system call. It implements core IRC commands, channel management, user authentication, and basic IRC protocol rules.
+**ft_irc** is a simplified implementation of an IRC (Internet Relay Chat) server written in **C++98**, developed as part of the 42 Network curriculum.
+
+The goal of this project is to understand low-level network programming, event-driven server design, and the fundamentals of the IRC protocol by implementing a functional IRC server from scratch.
+
+The server supports multiple simultaneous clients using non-blocking sockets and the `poll()` system call, and follows the core rules defined in RFC 1459 / RFC 2812 where required by the subject.
 
 ---
 
@@ -10,20 +14,24 @@ The server supports multiple simultaneous clients using non-blocking sockets and
 
 ### Networking
 - TCP server using BSD sockets
-- Non-blocking I/O with `poll()`
-- Multiple clients handled concurrently
-- Graceful client disconnection handling
+- Non-blocking file descriptors
+- I/O multiplexing with `poll()`
+- Handles multiple clients concurrently
+- Clean handling of client disconnections and server shutdown
 
 ### Authentication & Registration
-- `PASS` command required before any other command
-- `NICK` and `USER` commands required to complete registration
-- Clients cannot JOIN channels or send messages before registration
+- `PASS` command is mandatory before registration
+- `NICK` and `USER` commands are required to complete registration
+- Clients **cannot use JOIN, PRIVMSG, or channel commands before registration**
 - Nicknames are unique and case-insensitive
+- Proper numeric error replies for invalid or out-of-order commands
 
 ### User Commands
 - `PASS`, `NICK`, `USER`
-- `QUIT`, `PING / PONG`
-- `PRIVMSG`, `NOTICE`
+- `QUIT`
+- `PING / PONG`
+- `PRIVMSG`
+- `NOTICE`
 - `WHO`, `WHOIS`
 
 ### Channel Commands
@@ -34,17 +42,18 @@ The server supports multiple simultaneous clients using non-blocking sockets and
 - `MODE`
 
 ### Channel Modes
-- `+i` Invite-only
-- `+t` Topic change restricted to operators
-- `+k` Channel password
+- `+i` Invite-only channel
+- `+t` Topic restricted to operators
+- `+k` Channel password (key)
 - `+l` User limit
 - `+o` Operator privilege
 
 ### Channel Management
-- Channels are created on first JOIN
-- First user becomes channel operator
-- Empty channels are automatically deleted
-- Proper broadcast of JOIN / PART / QUIT messages
+- Channels are created automatically on first `JOIN`
+- The first user joining a channel becomes an operator
+- Empty channels are automatically destroyed
+- JOIN / PART / QUIT messages are properly broadcasted
+- Operator reassignment when needed
 
 ---
 
@@ -67,15 +76,20 @@ The server supports multiple simultaneous clients using non-blocking sockets and
 ├── Makefile
 └── README.md
 
+yaml
+Kodu kopyala
+
+---
+
 ## Build & Run
 
-### Compile
-make
+### Compilation
+Execution
 ./ircserv <port> <password>
 Example:
 ./ircserv 6667 secretpass
-Connecting with an IRC Client
-You can connect using KVirc, Irssi, or netcat.
+Connecting to the Server
+You can connect using an IRC client such as KVirc, Irssi, or via nc.
 
 Example (KVirc)
 Server: <server_ip>
@@ -84,38 +98,47 @@ Port: <port>
 
 Password: <password>
 
-The client must send:
+The client must send the following commands in order:
 
 PASS <password>
-
 NICK <nickname>
-
 USER <username> 0 * :realname
-
 Protocol Notes
 Commands are parsed line-by-line using \r\n
-Trailing parameters (starting with :) are handled correctly
-Nicknames and commands are case-insensitive
-Invalid or out-of-order commands return proper numeric errors
-Server never crashes on malformed input
 
-Memory & Safety
-Dynamic memory (Client*, Channel*) is properly managed
-All clients are removed from channels on disconnect
+Trailing parameters (starting with :) are handled correctly
+
+IRC commands and nicknames are case-insensitive
+
+Invalid commands return appropriate numeric error replies
+
+The server never crashes on malformed input
+
+Memory Management & Safety
+Dynamic memory (Client*, Channel*) is carefully managed
+
+All clients are removed from channels on QUIT or disconnect
+
 Channels are deleted when empty
-No file descriptors or heap memory leaks
+
+No file descriptor leaks
+
+No heap memory leaks
 
 Limitations
 Single-server implementation (no server-to-server links)
-No SSL/TLS
+
+No SSL/TLS support
+
 No file transfer (DCC)
+
 Minimal hostname handling
 
 Compliance
 Written in C++98
-Uses only allowed system calls
-No external libraries
-Fully compliant with the ft_irc subject
 
-Authors
-Developed as part of the 42 Network – ft_irc project.
+Uses only allowed system calls
+
+No external libraries
+
+Fully compliant with the ft_irc subject
