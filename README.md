@@ -1,4 +1,4 @@
-*This project has been created as part of the 42 curriculum by <skaynar> , <teraslan> , <ihancer>
+*This project has been created as part of the 42 curriculum by <skaynar>, <teraslan>, <ihancer>.*
 
 # ft_irc — Internet Relay Chat Server
 
@@ -77,9 +77,6 @@ The server supports multiple simultaneous clients using non-blocking sockets and
 │
 ├── Makefile
 └── README.md
-
-yaml
-Kodu kopyala
 
 ---
 
