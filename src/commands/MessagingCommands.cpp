@@ -1,5 +1,16 @@
-#include "../../include/Server.hpp"
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   MessagingCommands.cpp                              :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: ihancer <ihancer@student.42istanbul.com    +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2026/02/02 18:02:37 by ihancer           #+#    #+#             */
+/*   Updated: 2026/02/02 18:02:40 by ihancer          ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
 
+#include "../../include/Server.hpp"
 
 void Server::handlePrivmsg(int fd, const std::string& rawParams)
 {
